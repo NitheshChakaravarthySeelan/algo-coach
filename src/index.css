@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface-950 text-surface-200 font-sans antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent-500/30 text-white;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-surface-600;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-surface-900/60 backdrop-blur-xl border border-surface-700/50 rounded-2xl;
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300 hover:border-accent-500/30 hover:shadow-lg hover:shadow-accent-500/5;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-white via-accent-200 to-accent-400 bg-clip-text text-transparent;
+  }
+
+  .gradient-border {
+    @apply relative;
+  }
+
+  .gradient-border::before {
+    content: '';
+    @apply absolute -inset-[1px] bg-gradient-to-r from-accent-500 via-purple-500 to-pink-500 rounded-2xl -z-10 opacity-50 blur-sm;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
