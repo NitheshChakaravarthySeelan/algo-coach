@@ -34,11 +34,6 @@ export function Navbar() {
                 {item.label}
               </a>
             ))}
-            <a href="/admin">
-              <Button variant="ghost" size="sm">
-                Admin
-              </Button>
-            </a>
             <a href="#waitlist">
               <Button size="sm">Join Waitlist</Button>
             </a>
@@ -69,13 +64,8 @@ export function Navbar() {
               {item.label}
             </a>
           ))}
-          <div className="pt-2 flex gap-3">
-            <a href="/admin" className="flex-1">
-              <Button variant="secondary" size="sm" className="w-full">
-                Admin
-              </Button>
-            </a>
-            <a href="#waitlist" className="flex-1" onClick={() => setIsOpen(false)}>
+          <div className="pt-2">
+            <a href="#waitlist" className="block w-full" onClick={() => setIsOpen(false)}>
               <Button size="sm" className="w-full">
                 Join Waitlist
               </Button>

@@ -38,10 +38,12 @@ export function Hero() {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="gap-2">
-                Join Waitlist
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+              <a href="#waitlist">
+                <Button size="lg" className="gap-2">
+                  Join Waitlist
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </a>
               <Button variant="outline" size="lg" className="gap-2">
                 <Play className="w-4 h-4" />
                 View Demo

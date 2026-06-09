@@ -22,9 +22,7 @@ export function Footer() {
             <a href="#waitlist" className="text-sm text-surface-400 hover:text-white transition-colors">
               Waitlist
             </a>
-            <a href="/admin" className="text-sm text-surface-400 hover:text-white transition-colors">
-              Admin
-            </a>
+
           </div>
 
           <div className="flex items-center gap-4">
