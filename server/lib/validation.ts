@@ -14,9 +14,9 @@ export const waitlistSchema = z.object({
 
 export const surveySchema = z.object({
   email: z.string().email(),
-  struggles: z.array(z.string()).min(1, 'Select at least one struggle'),
-  desiredFeature: z.string().min(10).max(1000),
-  goals: z.array(z.string()).min(1, 'Select at least one goal'),
+  struggles: z.array(z.string()).optional(),
+  desiredFeature: z.string().max(1000).optional(),
+  goals: z.array(z.string()).optional(),
 })
 
 export type WaitlistInput = z.infer<typeof waitlistSchema>

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, User, Code, ChevronDown, ArrowRight, Check } from 'lucide-react'
+import { Mail, User, Code, ChevronDown, ArrowRight, Check, Loader } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { api } from '@/lib/api'
 
 const experienceLevels = [
   { value: 'beginner', label: 'Beginner' },
@@ -18,14 +19,26 @@ export function WaitlistForm() {
     experience: '',
   })
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setLoading(true)
+    setError('')
+    try {
+      await api.waitlist.submit(formData)
+      localStorage.setItem('algocoach_email', formData.email)
+      setSubmitted(true)
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (submitted) {
@@ -164,9 +177,18 @@ export function WaitlistForm() {
               </div>
             </div>
 
-            <Button type="submit" size="lg" className="w-full gap-2">
-              Join Waitlist
-              <ArrowRight className="w-4 h-4" />
+            {error && (
+              <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-center">
+                {error}
+              </div>
+            )}
+
+            <Button type="submit" size="lg" className="w-full gap-2" disabled={loading}>
+              {loading ? (
+                <><Loader className="w-4 h-4 animate-spin" /> Submitting...</>
+              ) : (
+                <>Join Waitlist <ArrowRight className="w-4 h-4" /></>
+              )}
             </Button>
 
             <p className="text-xs text-surface-500 text-center">

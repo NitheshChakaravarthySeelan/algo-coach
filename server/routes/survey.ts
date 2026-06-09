@@ -14,9 +14,9 @@ survey.post('/', async (c) => {
     const entry = {
       id: crypto.randomUUID(),
       email: parsed.email,
-      struggles: JSON.stringify(parsed.struggles),
-      desiredFeature: parsed.desiredFeature,
-      goals: JSON.stringify(parsed.goals),
+      struggles: JSON.stringify(parsed.struggles ?? []),
+      desiredFeature: parsed.desiredFeature ?? '',
+      goals: JSON.stringify(parsed.goals ?? []),
       createdAt: new Date(),
     }
 

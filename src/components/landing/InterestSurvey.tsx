@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Loader } from 'lucide-react'
+import { api } from '@/lib/api'
 
 const struggles = [
   { id: 'consistency', label: 'Staying consistent' },
@@ -17,6 +18,8 @@ export function InterestSurvey() {
   const [selected, setSelected] = useState<string[]>([])
   const [feature, setFeature] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const toggle = (id: string) => {
     setSelected((prev) =>
@@ -24,9 +27,28 @@ export function InterestSurvey() {
     )
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    const email = localStorage.getItem('algocoach_email')
+    if (!email) {
+      setError('Please join the waitlist first')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      await api.survey.submit({
+        email,
+        struggles: selected,
+        desiredFeature: feature,
+        goals: [],
+      })
+      setSubmitted(true)
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (submitted) {
@@ -118,9 +140,18 @@ export function InterestSurvey() {
               />
             </div>
 
-            <Button type="submit" size="lg" className="w-full gap-2">
-              Submit Feedback
-              <ArrowRight className="w-4 h-4" />
+            {error && (
+              <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-center">
+                {error}
+              </div>
+            )}
+
+            <Button type="submit" size="lg" className="w-full gap-2" disabled={loading}>
+              {loading ? (
+                <><Loader className="w-4 h-4 animate-spin" /> Submitting...</>
+              ) : (
+                <>Submit Feedback <ArrowRight className="w-4 h-4" /></>
+              )}
             </Button>
           </form>
         </motion.div>

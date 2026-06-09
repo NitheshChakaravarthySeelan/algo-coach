@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Briefcase, Trophy, Swords, Puzzle, Target, ArrowRight } from 'lucide-react'
+import { Briefcase, Trophy, Swords, Puzzle, Target, ArrowRight, Loader } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { api } from '@/lib/api'
 
 const goals = [
   { id: 'interviews', label: 'Job Interviews', icon: Briefcase, description: 'Ace technical interviews at top companies' },
@@ -14,6 +15,8 @@ const goals = [
 export function GoalsForm() {
   const [selected, setSelected] = useState<string[]>([])
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const toggle = (id: string) => {
     setSelected((prev) =>
@@ -21,9 +24,28 @@ export function GoalsForm() {
     )
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    const email = localStorage.getItem('algocoach_email')
+    if (!email) {
+      setError('Please join the waitlist first')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      await api.survey.submit({
+        email,
+        struggles: [],
+        desiredFeature: '',
+        goals: selected,
+      })
+      setSubmitted(true)
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (submitted) {
@@ -113,10 +135,19 @@ export function GoalsForm() {
               })}
             </div>
 
+            {error && (
+              <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-center">
+                {error}
+              </div>
+            )}
+
             <div className="text-center pt-4">
-              <Button type="submit" size="lg" className="gap-2">
-                Save My Goals
-                <ArrowRight className="w-4 h-4" />
+              <Button type="submit" size="lg" className="gap-2" disabled={loading}>
+                {loading ? (
+                  <><Loader className="w-4 h-4 animate-spin" /> Saving...</>
+                ) : (
+                  <>Save My Goals <ArrowRight className="w-4 h-4" /></>
+                )}
               </Button>
             </div>
           </form>
