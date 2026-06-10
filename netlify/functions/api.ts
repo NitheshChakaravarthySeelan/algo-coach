@@ -13,7 +13,8 @@ export const handler = async (event: any, context: any) => {
     queryStringParameters,
   } = event
 
-  const url = new URL(path || '/', 'https://algo-coach.netlify.app')
+  const host = headers?.['host'] || headers?.['x-forwarded-host'] || 'localhost'
+  const url = new URL(path || '/', `https://${host}`)
   if (queryStringParameters) {
     for (const [k, v] of Object.entries(queryStringParameters)) {
       if (v) url.searchParams.set(k, v as string)
