@@ -29,5 +29,11 @@ export const handler = async (event: any, context: any) => {
       : undefined,
   })
 
-  return honoHandler(req, context)
+  const response = await honoHandler(req, context)
+
+  return {
+    statusCode: response.status,
+    headers: Object.fromEntries(response.headers),
+    body: await response.text(),
+  }
 }
