@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { auth } from './auth'
 import waitlistRoutes from './routes/waitlist'
 import surveyRoutes from './routes/survey'
+import leetcodeRoutes from './routes/leetcode'
 
 const app = new Hono()
 
@@ -19,6 +20,7 @@ app.all('/api/auth/*', async (c) => {
 
 app.route('/api/waitlist', waitlistRoutes)
 app.route('/api/survey', surveyRoutes)
+app.route('/api/leetcode', leetcodeRoutes)
 
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 

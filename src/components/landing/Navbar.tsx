@@ -1,16 +1,18 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Code2, Menu, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Code2, Menu, X, LogIn, Github, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { authClient } from '@/lib/auth-client'
 
 const navItems = [
   { label: 'Features', href: '#features' },
-  { label: 'Dashboard', href: '#dashboard' },
   { label: 'Waitlist', href: '#waitlist' },
 ]
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const { data: session } = authClient.useSession()
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50">
@@ -37,6 +39,16 @@ export function Navbar() {
             <a href="#waitlist">
               <Button size="sm">Join Waitlist</Button>
             </a>
+            {session ? (
+              <a href="/dashboard">
+                <Button size="sm" variant="outline">
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Button>
+              </a>
+            ) : (
+              <SignInDropdown />
+            )}
           </div>
 
           <button
@@ -64,15 +76,91 @@ export function Navbar() {
               {item.label}
             </a>
           ))}
-          <div className="pt-2">
+          <div className="pt-2 space-y-2">
             <a href="#waitlist" className="block w-full" onClick={() => setIsOpen(false)}>
               <Button size="sm" className="w-full">
                 Join Waitlist
               </Button>
             </a>
+            {session ? (
+              <a href="/dashboard" className="block w-full" onClick={() => setIsOpen(false)}>
+                <Button size="sm" variant="outline" className="w-full">
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Button>
+              </a>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => authClient.signIn.social({ provider: 'github', callbackURL: '/dashboard' })}
+                >
+                  <Github className="w-4 h-4" />
+                  GitHub
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => authClient.signIn.social({ provider: 'google', callbackURL: '/dashboard' })}
+                >
+                  <LogIn className="w-4 h-4" />
+                  Google
+                </Button>
+              </>
+            )}
           </div>
         </motion.div>
       )}
     </nav>
+  )
+}
+
+function SignInDropdown() {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(!open)}>
+        <LogIn className="w-4 h-4" />
+        Sign In
+      </Button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            className="absolute right-0 mt-2 w-48 bg-surface-900 border border-surface-700 rounded-xl overflow-hidden shadow-xl z-50"
+          >
+            <button
+              onClick={() => { authClient.signIn.social({ provider: 'github', callbackURL: '/dashboard' }); setOpen(false) }}
+              className="flex items-center gap-3 w-full px-4 py-3 text-sm text-surface-300 hover:text-white hover:bg-surface-800 transition-colors"
+            >
+              <Github className="w-4 h-4" />
+              Continue with GitHub
+            </button>
+            <button
+              onClick={() => { authClient.signIn.social({ provider: 'google', callbackURL: '/dashboard' }); setOpen(false) }}
+              className="flex items-center gap-3 w-full px-4 py-3 text-sm text-surface-300 hover:text-white hover:bg-surface-800 transition-colors"
+            >
+              <LogIn className="w-4 h-4" />
+              Continue with Google
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }

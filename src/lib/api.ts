@@ -44,4 +44,28 @@ export const api = {
     list: () =>
       request<{ success: boolean; data: any[] }>('/survey'),
   },
+  leetcode: {
+    link: (body: { leetcodeUsername: string }) =>
+      request<{ success: boolean; data: { leetcodeUsername: string; totalSolved: number; easySolved: number; mediumSolved: number; hardSolved: number } }>('/leetcode/link', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    stats: () =>
+      request<{ success: boolean; data: { id: string; leetcodeUsername: string; totalSolved: number; easySolved: number; mediumSolved: number; hardSolved: number; createdAt: string; updatedAt: string } }>('/leetcode/stats'),
+    refresh: () =>
+      request<{ success: boolean; data: { totalSolved: number; easySolved: number; mediumSolved: number; hardSolved: number; lastFetchedAt: string } }>('/leetcode/refresh', {
+        method: 'POST',
+      }),
+    log: (body: { problemId: string; problemName: string; difficulty: string; topics?: string[] }) =>
+      request<{ success: boolean; data: { id: string; status: string } }>('/leetcode/log', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    markSolved: (problemId: string) =>
+      request<{ success: boolean; data: any }>(`/leetcode/log/${problemId}`, {
+        method: 'PATCH',
+      }),
+    listProblems: (status?: string) =>
+      request<{ success: boolean; data: any[] }>(`/leetcode/log${status ? `?status=${status}` : ''}`),
+  },
 }

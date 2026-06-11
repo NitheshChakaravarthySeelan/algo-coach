@@ -21,7 +21,7 @@ export const handler = async (event: any, context: any) => {
     }
   }
 
-  const req = new Request(url, {
+  const req = new Request(url.toString(), {
     method: method || 'GET',
     headers: headers || {},
     body: method !== 'GET' && method !== 'HEAD' && body
