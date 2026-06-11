@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Code2, Menu, X, LogIn, Github, LayoutDashboard } from 'lucide-react'
+import { Code2, Menu, X, LogIn, GitBranch, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { authClient } from '@/lib/auth-client'
 
@@ -97,7 +96,7 @@ export function Navbar() {
                   className="w-full"
                   onClick={() => authClient.signIn.social({ provider: 'github', callbackURL: '/dashboard' })}
                 >
-                  <Github className="w-4 h-4" />
+                  <GitBranch className="w-4 h-4" />
                   GitHub
                 </Button>
                 <Button
@@ -148,7 +147,7 @@ function SignInDropdown() {
               onClick={() => { authClient.signIn.social({ provider: 'github', callbackURL: '/dashboard' }); setOpen(false) }}
               className="flex items-center gap-3 w-full px-4 py-3 text-sm text-surface-300 hover:text-white hover:bg-surface-800 transition-colors"
             >
-              <Github className="w-4 h-4" />
+              <GitBranch className="w-4 h-4" />
               Continue with GitHub
             </button>
             <button

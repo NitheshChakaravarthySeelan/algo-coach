@@ -19,7 +19,7 @@ const difficultyBadge = {
   Hard: 'info' as const,
 }
 
-export function ProblemList({ problems, onRefresh }: { problems: Problem[]; onRefresh: () => void }) {
+export function ProblemList({ problems }: { problems: Problem[] }) {
   const [filter, setFilter] = useState<'ALL' | 'IN_PROGRESS' | 'SOLVED'>('ALL')
   const [search, setSearch] = useState('')
 

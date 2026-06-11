@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, Github } from 'lucide-react'
+import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, GitBranch } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/Button'
@@ -27,7 +27,7 @@ export function Dashboard() {
     try {
       const [statsRes, problemsRes] = await Promise.all([
         api.leetcode.stats().catch(() => null),
-        api.leetcode.listProblems().catch(() => []),
+        api.leetcode.listProblems().catch(() => ({ success: false, data: [] as any[] })),
       ])
       setStats(statsRes?.data ?? null)
       setProblems(problemsRes?.data ?? [])
@@ -143,7 +143,7 @@ export function Dashboard() {
             <StatsCards stats={stats} />
 
             <div className="mt-8">
-              <ProblemList problems={problems} onRefresh={loadData} />
+              <ProblemList problems={problems} />
             </div>
           </>
         ) : (
@@ -154,7 +154,7 @@ export function Dashboard() {
           >
             <div className="glass-card p-8 text-center">
               <div className="w-16 h-16 rounded-2xl bg-accent-500/10 flex items-center justify-center mx-auto mb-6">
-                <Github className="w-8 h-8 text-accent-400" />
+                <GitBranch className="w-8 h-8 text-accent-400" />
               </div>
               <h2 className="text-xl font-semibold text-white mb-2">Link Your LeetCode Profile</h2>
               <p className="text-sm text-surface-400 mb-6">
