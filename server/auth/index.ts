@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { db } from '../db'
 import * as schema from '../db/schema'
+import { sendVerificationEmail } from '../lib/email'
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -21,7 +22,7 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => {
-      console.log(`[AlgoCoach] Verification email sent to ${user.email}: ${url}`)
+      await sendVerificationEmail(user.email, url)
     },
   },
 })
