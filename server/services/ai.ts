@@ -8,6 +8,14 @@ if (!API_KEY) {
 
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null
 
+function extractJson(text: string): string {
+  const firstBrace = text.indexOf("{")
+  const firstBracket = text.indexOf("[")
+  const start = firstBrace === -1 ? firstBracket : firstBracket === -1 ? firstBrace : Math.min(firstBrace, firstBracket)
+  if (start === -1) return text
+  return text.slice(start)
+}
+
 const searchTool = {
   functionDeclarations: [{
     name: "search_leetcode_problems",
@@ -57,7 +65,7 @@ export async function generateRoadmap(preferences: UserPreferences): Promise<Roa
   if (!genAI) throw new Error("GEMINI_API_KEY not configured")
 
   const model = genAI.getGenerativeModel({
-    model: "gemma-3-12b-it",
+    model: "gemma-4-31b-it",
     generationConfig: {
       temperature: 0.7,
       responseMimeType: "application/json",
@@ -85,7 +93,7 @@ Return a JSON array where each entry has: week (number), topic (string), descrip
 Aim for 4-12 weeks total depending on the user's experience and goals.`
 
   const result = await model.generateContent(prompt)
-  const text = result.response.text()
+  const text = extractJson(result.response.text())
 
   try {
     const parsed = JSON.parse(text)
@@ -149,7 +157,7 @@ export async function generateDailyTask(params: {
   }
 
   const model = genAI.getGenerativeModel({
-    model: "gemma-3-12b-it",
+    model: "gemma-4-31b-it",
     generationConfig: { temperature: 0.5, responseMimeType: "application/json" },
   })
 
@@ -170,7 +178,7 @@ Return JSON: { problems: [{title, titleSlug, difficulty, topicTags: string[], le
 
   try {
     const result = await model.generateContent(prompt)
-    const text = result.response.text()
+    const text = extractJson(result.response.text())
     const parsed = JSON.parse(text)
     return {
       problems: (parsed.problems || []).map((p: Record<string, unknown>) => ({
