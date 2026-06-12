@@ -7,7 +7,7 @@ export function Hero() {
     <section className="relative min-h-screen flex items-center pt-24 pb-16 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-accent-500/5 via-transparent to-transparent pointer-events-none" />
       <div className="absolute top-1/4 -left-32 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -38,9 +38,9 @@ export function Hero() {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <a href="#waitlist">
+              <a href="/dashboard">
                 <Button size="lg" className="gap-2">
-                  Join Waitlist
+                  Get Started
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </a>
@@ -55,7 +55,7 @@ export function Hero() {
                 {[...Array(4)].map((_, i) => (
                   <div
                     key={i}
-                    className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-400 to-purple-500 border-2 border-surface-950"
+                    className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 border-2 border-surface-950"
                   />
                 ))}
               </div>
@@ -71,7 +71,7 @@ export function Hero() {
             transition={{ duration: 0.7, delay: 0.3 }}
             className="relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-accent-500/20 to-purple-500/20 rounded-3xl blur-2xl" />
+            <div className="absolute inset-0 bg-gradient-to-r from-accent-500/20 to-accent-600/20 rounded-3xl blur-2xl" />
             <div className="relative glass-card p-1">
               <div className="bg-surface-900 rounded-2xl overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 bg-surface-800/50 border-b border-surface-700/50">
@@ -83,9 +83,9 @@ export function Hero() {
                 <div className="p-6 space-y-4">
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { label: 'Streak', value: '12 days', color: 'from-amber-400 to-orange-500' },
-                      { label: 'Solved', value: '147', color: 'from-emerald-400 to-green-500' },
-                      { label: 'Rate', value: '95%', color: 'from-accent-400 to-purple-500' },
+                      { label: 'Streak', value: '12 days', color: 'from-surface-400 to-surface-200' },
+                      { label: 'Solved', value: '147', color: 'from-surface-300 to-surface-100' },
+                      { label: 'Rate', value: '95%', color: 'from-accent-400 to-accent-600' },
                     ].map((stat) => (
                       <div key={stat.label} className="glass-card p-3 text-center">
                         <div className={`text-lg font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>

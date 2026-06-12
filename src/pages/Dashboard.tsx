@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, GitBranch } from 'lucide-react'
+import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, GitBranch, Sun, Moon } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { api } from '@/lib/api'
+import { useTheme } from '@/lib/theme'
 import { Button } from '@/components/ui/Button'
 import { StatsCards } from '@/components/dashboard/StatsCards'
 import { ProblemList } from '@/components/dashboard/ProblemList'
 import { LogProblemModal } from '@/components/dashboard/LogProblemModal'
+import { TodaysPlan } from '@/components/dashboard/TodaysPlan'
+import { RoadmapOverview } from '@/components/dashboard/RoadmapOverview'
 
 export function Dashboard() {
   const navigate = useNavigate()
   const { data: session, isPending: authLoading } = authClient.useSession()
+  const { theme, toggleTheme } = useTheme()
 
+  const [checkingOnboard, setCheckingOnboard] = useState(true)
   const [stats, setStats] = useState<any>(null)
   const [problems, setProblems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,7 +48,16 @@ export function Dashboard() {
   }, [session, authLoading, navigate])
 
   useEffect(() => {
-    if (session) loadData()
+    if (!session) return
+    api.onboard.status()
+      .then((res) => {
+        if (!res.onboarded) { navigate('/onboard', { replace: true }); return }
+        setCheckingOnboard(false)
+        loadData()
+      })
+      .catch(() => {
+        navigate('/onboard', { replace: true })
+      })
   }, [session])
 
   async function handleLink(e: React.FormEvent) {
@@ -61,7 +75,7 @@ export function Dashboard() {
     }
   }
 
-  if (authLoading) {
+  if (authLoading || checkingOnboard) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-950">
         <Loader2 className="w-8 h-8 text-accent-400 animate-spin" />
@@ -77,12 +91,19 @@ export function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-purple-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center">
                 <Code2 className="w-4 h-4 text-white" />
               </div>
               <span className="font-bold text-lg text-white">AlgoCoach</span>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={toggleTheme}
+                className="p-2 text-surface-400 hover:text-white transition-colors"
+                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
               <span className="text-sm text-surface-400 hidden sm:block">
                 {session.user.name || session.user.email}
               </span>
@@ -142,8 +163,17 @@ export function Dashboard() {
 
             <StatsCards stats={stats} />
 
-            <div className="mt-8">
-              <ProblemList problems={problems} />
+            <div className="grid lg:grid-cols-3 gap-6 mt-6">
+              <div className="lg:col-span-2">
+                <TodaysPlan />
+              </div>
+              <div>
+                <RoadmapOverview />
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <ProblemList problems={problems} onRefresh={loadData} />
             </div>
           </>
         ) : (

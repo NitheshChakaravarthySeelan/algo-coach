@@ -7,21 +7,21 @@ const stats = [
     value: '2,000+',
     label: 'Problems Tracked',
     description: 'Comprehensive problem database with difficulty and topic tagging',
-    color: 'from-accent-400 to-purple-500',
+    color: 'from-accent-400 to-accent-600',
   },
   {
     icon: Users,
     value: '500+',
     label: 'Early Signups',
     description: 'Growing community of dedicated programmers',
-    color: 'from-emerald-400 to-green-500',
+    color: 'from-surface-400 to-surface-200',
   },
   {
     icon: TrendingUp,
     value: '95%',
     label: 'Daily Completion Rate',
     description: 'Of users complete their personalized daily plan',
-    color: 'from-amber-400 to-orange-500',
+    color: 'from-surface-500 to-surface-300',
   },
 ]
 
@@ -53,7 +53,7 @@ export function SocialProof() {
               transition={{ duration: 0.5, delay: index * 0.15 }}
               className="relative group"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-accent-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-r from-accent-500/10 to-accent-600/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="relative glass-card p-8 text-center">
                 <div className={`w-14 h-14 mx-auto mb-5 rounded-2xl bg-gradient-to-br ${stat.color} p-3.5`}>
                   <stat.icon className="w-full h-full text-white" />

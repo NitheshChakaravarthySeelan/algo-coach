@@ -11,20 +11,6 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  waitlist: {
-    submit: (body: {
-      name: string
-      email: string
-      leetcodeUsername?: string
-      experience: string
-    }) =>
-      request<{ success: boolean; data: { id: string } }>('/waitlist', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
-    list: () =>
-      request<{ success: boolean; data: any[] }>('/waitlist'),
-  },
   survey: {
     submit: (body: {
       email: string
@@ -67,5 +53,31 @@ export const api = {
       }),
     listProblems: (status?: string) =>
       request<{ success: boolean; data: any[] }>(`/leetcode/log${status ? `?status=${status}` : ''}`),
+  },
+  onboard: {
+    status: () =>
+      request<{ success: boolean; onboarded: boolean; data?: any }>('/onboard'),
+    submit: (body: {
+      experienceLevel: string
+      goals: string[]
+      weakTopics: string[]
+      targetCompanies?: string[]
+      hoursPerWeek: number
+      targetDate?: string
+    }) =>
+      request<{ success: boolean; data: { roadmap: any } }>('/onboard', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+  },
+  plan: {
+    roadmap: () =>
+      request<{ success: boolean; data: { id: string; weeks: any; currentWeek: number } }>('/plan/roadmap'),
+    today: {
+      get: () =>
+      request<{ success: boolean; exists: boolean; data: any }>('/plan/today'),
+      generate: () =>
+        request<{ success: boolean; data: any }>('/plan/today', { method: 'POST' }),
+    },
   },
 }

@@ -9,9 +9,9 @@ interface StatsData {
 }
 
 const difficultyColors = {
-  easy: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', ring: 'stroke-emerald-400' },
-  medium: { bg: 'bg-amber-500/10', text: 'text-amber-400', ring: 'stroke-amber-400' },
-  hard: { bg: 'bg-red-500/10', text: 'text-red-400', ring: 'stroke-red-400' },
+  easy: { bg: 'bg-surface-600/30', text: 'text-surface-300', ring: 'stroke-surface-300' },
+  medium: { bg: 'bg-surface-500/30', text: 'text-surface-200', ring: 'stroke-surface-200' },
+  hard: { bg: 'bg-surface-700/30', text: 'text-surface-100', ring: 'stroke-surface-100' },
 }
 
 function RingProgress({ value, max, color, label }: { value: number; max: number; color: string; label: string }) {

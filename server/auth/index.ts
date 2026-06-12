@@ -4,6 +4,8 @@ import { db } from '../db'
 import * as schema from '../db/schema'
 import { sendVerificationEmail } from '../lib/email'
 
+const productionUrl = 'https://algo-coach.netlify.app'
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: 'pg',
@@ -25,4 +27,5 @@ export const auth = betterAuth({
       await sendVerificationEmail(user.email, url)
     },
   },
+  trustedOrigins: [productionUrl, 'http://localhost:5173', 'http://localhost:3000'],
 })

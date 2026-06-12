@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Code2, Menu, X, LogIn, GitBranch, LayoutDashboard } from 'lucide-react'
+import { Code2, Menu, X, LogIn, GitBranch, LayoutDashboard, Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { authClient } from '@/lib/auth-client'
+import { useTheme } from '@/lib/theme'
 
 const navItems = [
   { label: 'Features', href: '#features' },
-  { label: 'Waitlist', href: '#waitlist' },
+  { label: 'Dashboard', href: '#dashboard' },
 ]
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const { data: session } = authClient.useSession()
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50">
@@ -19,7 +21,7 @@ export function Navbar() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <a href="#" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-purple-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center">
               <Code2 className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-lg text-white">AlgoCoach</span>
@@ -35,9 +37,6 @@ export function Navbar() {
                 {item.label}
               </a>
             ))}
-            <a href="#waitlist">
-              <Button size="sm">Join Waitlist</Button>
-            </a>
             {session ? (
               <a href="/dashboard">
                 <Button size="sm" variant="outline">
@@ -48,6 +47,13 @@ export function Navbar() {
             ) : (
               <SignInDropdown />
             )}
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-surface-400 hover:text-white transition-colors"
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
           </div>
 
           <button
@@ -76,11 +82,13 @@ export function Navbar() {
             </a>
           ))}
           <div className="pt-2 space-y-2">
-            <a href="#waitlist" className="block w-full" onClick={() => setIsOpen(false)}>
-              <Button size="sm" className="w-full">
-                Join Waitlist
-              </Button>
-            </a>
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-3 w-full px-4 py-3 text-sm text-surface-400 hover:text-white hover:bg-surface-800/50 rounded-xl transition-colors"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            </button>
             {session ? (
               <a href="/dashboard" className="block w-full" onClick={() => setIsOpen(false)}>
                 <Button size="sm" variant="outline" className="w-full">
@@ -92,12 +100,11 @@ export function Navbar() {
               <>
                 <Button
                   size="sm"
-                  variant="ghost"
                   className="w-full"
                   onClick={() => authClient.signIn.social({ provider: 'github', callbackURL: '/dashboard' })}
                 >
                   <GitBranch className="w-4 h-4" />
-                  GitHub
+                  Sign in with GitHub
                 </Button>
                 <Button
                   size="sm"
@@ -106,7 +113,7 @@ export function Navbar() {
                   onClick={() => authClient.signIn.social({ provider: 'google', callbackURL: '/dashboard' })}
                 >
                   <LogIn className="w-4 h-4" />
-                  Google
+                  Sign in with Google
                 </Button>
               </>
             )}

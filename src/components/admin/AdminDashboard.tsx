@@ -1,12 +1,10 @@
-import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Users, TrendingUp, Target, BarChart3, Download, Loader } from 'lucide-react'
+import { Users, TrendingUp, Target, BarChart3, Download } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts'
 import { Button } from '@/components/ui/Button'
-import { api } from '@/lib/api'
 import {
   experienceDistribution as mockExperience,
   painPointData as mockPainPoints,
@@ -18,16 +16,9 @@ import {
 
 type WaitlistEntry = { id: string; name: string; email: string; leetcodeUsername: string | null; experience: string; struggles: string | null; desiredFeature: string | null; goals: string | null; userId: string | null; createdAt: string }
 
-export function AdminDashboard() {
-  const [entries, setEntries] = useState<WaitlistEntry[]>([])
-  const [loading, setLoading] = useState(true)
+const entries = mockEntries as unknown as WaitlistEntry[]
 
-  useEffect(() => {
-    api.waitlist.list()
-      .then((res) => setEntries(res.data))
-      .catch(() => setEntries(mockEntries as any))
-      .finally(() => setLoading(false))
-  }, [])
+export function AdminDashboard() {
 
   const experienceDist = ['beginner', 'intermediate', 'advanced', 'competitive'].map((level) => ({
     name: level.charAt(0).toUpperCase() + level.slice(1),
@@ -54,14 +45,6 @@ export function AdminDashboard() {
 
   const featureData = mockFeatures
   const monthlyData = mockMonthly
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-surface-950 flex items-center justify-center">
-        <Loader className="w-6 h-6 text-accent-400 animate-spin" />
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-surface-950">
@@ -102,13 +85,13 @@ export function AdminDashboard() {
                 <div className="text-xs text-surface-400">Total Signups</div>
               </div>
             </div>
-            <div className="text-xs text-emerald-400">+{entries.length} this month</div>
+            <div className="text-xs text-surface-400">+{entries.length} this month</div>
           </div>
 
           <div className="glass-card p-5">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-emerald-400" />
+              <div className="w-10 h-10 rounded-xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-accent-400" />
               </div>
               <div>
                 <div className="text-2xl font-bold text-white">{entries.length > 0 ? '100%' : '95%'}</div>
@@ -120,8 +103,8 @@ export function AdminDashboard() {
 
           <div className="glass-card p-5">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-purple-400" />
+              <div className="w-10 h-10 rounded-xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-accent-400" />
               </div>
               <div>
                 <div className="text-2xl font-bold text-white">{painPoints.length}</div>
@@ -133,8 +116,8 @@ export function AdminDashboard() {
 
           <div className="glass-card p-5">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                <Target className="w-5 h-5 text-amber-400" />
+              <div className="w-10 h-10 rounded-xl bg-surface-600/30 border border-surface-500/30 flex items-center justify-center">
+                <Target className="w-5 h-5 text-surface-300" />
               </div>
               <div>
                 <div className="text-2xl font-bold text-white">{goalDist.length}</div>
@@ -161,7 +144,7 @@ export function AdminDashboard() {
                   <XAxis dataKey="month" stroke="#4a5678" fontSize={12} />
                   <YAxis stroke="#4a5678" fontSize={12} />
                   <Tooltip contentStyle={{ backgroundColor: '#131826', border: '1px solid #37415c', borderRadius: '12px' }} labelStyle={{ color: '#e2e6f0' }} />
-                  <Line type="monotone" dataKey="signups" stroke="#6366f1" strokeWidth={2} dot={{ fill: '#6366f1' }} />
+                  <Line type="monotone" dataKey="signups" stroke="#777777" strokeWidth={2} dot={{ fill: '#777777' }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -212,7 +195,7 @@ export function AdminDashboard() {
                   <XAxis type="number" stroke="#4a5678" fontSize={12} />
                   <YAxis type="category" dataKey="name" stroke="#4a5678" fontSize={12} width={130} />
                   <Tooltip contentStyle={{ backgroundColor: '#131826', border: '1px solid #37415c', borderRadius: '12px' }} labelStyle={{ color: '#e2e6f0' }} />
-                  <Bar dataKey="value" fill="#6366f1" radius={[0, 6, 6, 0]} barSize={20} />
+                  <Bar dataKey="value" fill="#777777" radius={[0, 6, 6, 0]} barSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -262,8 +245,8 @@ export function AdminDashboard() {
                 <XAxis dataKey="name" stroke="#4a5678" fontSize={12} />
                 <YAxis stroke="#4a5678" fontSize={12} domain={[0, 100]} />
                 <Tooltip contentStyle={{ backgroundColor: '#131826', border: '1px solid #37415c', borderRadius: '12px' }} labelStyle={{ color: '#e2e6f0' }} />
-                <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={40}>
-                  {featureData.map((_, index) => <Cell key={`cell-${index}`} fill={index === 0 ? '#818cf8' : index === 1 ? '#6366f1' : '#4f46e5'} />)}
+                <Bar dataKey="value" fill="#777777" radius={[6, 6, 0, 0]} barSize={40}>
+                  {featureData.map((_, index) => <Cell key={`cell-${index}`} fill={index === 0 ? '#999999' : index === 1 ? '#777777' : '#555555'} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

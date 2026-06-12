@@ -3,6 +3,45 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --surface-50: 252 252 252;
+    --surface-100: 245 245 245;
+    --surface-200: 232 232 232;
+    --surface-300: 214 214 214;
+    --surface-400: 168 168 168;
+    --surface-500: 128 128 128;
+    --surface-600: 96 96 96;
+    --surface-700: 75 75 75;
+    --surface-800: 55 55 55;
+    --surface-900: 40 40 40;
+    --surface-950: 30 30 30;
+    --accent-50: 240 240 240;
+    --accent-100: 224 224 224;
+    --accent-200: 200 200 200;
+    --accent-300: 176 176 176;
+    --accent-400: 150 150 150;
+    --accent-500: 120 120 120;
+    --accent-600: 100 100 100;
+    --accent-700: 80 80 80;
+    --accent-800: 60 60 60;
+    --accent-900: 45 45 45;
+    --accent-950: 35 35 35;
+  }
+
+  .dark {
+    --surface-50: 212 212 212;
+    --surface-100: 200 200 200;
+    --surface-200: 180 180 180;
+    --surface-300: 156 156 156;
+    --surface-400: 120 120 120;
+    --surface-500: 100 100 100;
+    --surface-600: 80 80 80;
+    --surface-700: 60 60 60;
+    --surface-800: 45 45 45;
+    --surface-900: 30 30 30;
+    --surface-950: 20 20 20;
+  }
+
   html {
     scroll-behavior: smooth;
   }
@@ -20,21 +59,21 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-surface-900;
+    @apply bg-surface-800;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-surface-700 rounded-full;
+    @apply bg-surface-600 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-surface-600;
+    @apply bg-surface-500;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-surface-900/60 backdrop-blur-xl border border-surface-700/50 rounded-2xl;
+    @apply bg-surface-800/60 backdrop-blur-xl border border-surface-600/50 rounded-2xl;
   }
 
   .glass-card-hover {
@@ -51,7 +90,7 @@
 
   .gradient-border::before {
     content: '';
-    @apply absolute -inset-[1px] bg-gradient-to-r from-accent-500 via-purple-500 to-pink-500 rounded-2xl -z-10 opacity-50 blur-sm;
+    @apply absolute -inset-[1px] bg-gradient-to-r from-accent-500 to-accent-300 rounded-2xl -z-10 opacity-50 blur-sm;
   }
 }
 

@@ -14,37 +14,37 @@ const problems = [
     icon: Layers,
     title: 'Too many problems',
     description: 'Over 3,000 problems with no clear path on where to start or what to focus on next.',
-    color: 'from-blue-400 to-blue-600',
+    color: 'from-surface-400 to-surface-600',
   },
   {
     icon: Activity,
     title: 'Inconsistent practice',
     description: 'Skipping days turns into weeks. Without structure, consistency is nearly impossible.',
-    color: 'from-amber-400 to-orange-500',
+    color: 'from-surface-500 to-surface-300',
   },
   {
     icon: RotateCcw,
     title: 'Forgetting topics',
     description: 'You solved DP last month, but now it feels like starting from scratch again.',
-    color: 'from-purple-400 to-purple-600',
+    color: 'from-accent-400 to-accent-700',
   },
   {
     icon: ArrowUpRight,
     title: 'No progression',
     description: 'Jumping between Easy and Hard randomly without a structured difficulty ramp.',
-    color: 'from-emerald-400 to-green-500',
+    color: 'from-surface-300 to-surface-100',
   },
   {
     icon: LogOut,
     title: 'Returning is painful',
     description: 'After a long break, you have no idea where you left off or what to revisit.',
-    color: 'from-rose-400 to-rose-600',
+    color: 'from-surface-500 to-surface-700',
   },
   {
     icon: Brain,
     title: 'No weak-spot focus',
     description: 'You keep solving what you are good at instead of targeting your actual weaknesses.',
-    color: 'from-cyan-400 to-cyan-600',
+    color: 'from-surface-400 to-surface-600',
   },
 ]
 

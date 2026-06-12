@@ -5,9 +5,9 @@ interface BadgeProps {
 
 const badgeVariants = {
   default: 'bg-surface-800 text-surface-300 border-surface-700',
-  success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  info: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  success: 'bg-accent-500/10 text-accent-400 border-accent-500/20',
+  warning: 'bg-surface-600/30 text-surface-300 border-surface-500/30',
+  info: 'bg-surface-700/30 text-surface-400 border-surface-600/30',
 }
 
 export function Badge({ children, variant = 'default' }: BadgeProps) {

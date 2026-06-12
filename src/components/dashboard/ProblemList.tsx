@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Circle, Search, Filter } from 'lucide-react'
+import { CheckCircle2, Circle, Search, Filter, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { api } from '@/lib/api'
 
 interface Problem {
   id: string
@@ -19,9 +20,22 @@ const difficultyBadge = {
   Hard: 'info' as const,
 }
 
-export function ProblemList({ problems }: { problems: Problem[] }) {
+export function ProblemList({ problems, onRefresh }: { problems: Problem[]; onRefresh?: () => void }) {
   const [filter, setFilter] = useState<'ALL' | 'IN_PROGRESS' | 'SOLVED'>('ALL')
   const [search, setSearch] = useState('')
+  const [solvingId, setSolvingId] = useState<string | null>(null)
+
+  async function handleMarkSolved(problem: Problem) {
+    if (problem.status === 'SOLVED' || solvingId) return
+    setSolvingId(problem.problemId)
+    try {
+      await api.leetcode.markSolved(problem.problemId)
+      onRefresh?.()
+    } catch {
+    } finally {
+      setSolvingId(null)
+    }
+  }
 
   const filtered = problems
     .filter((p) => filter === 'ALL' || p.status === filter)
@@ -73,11 +87,20 @@ export function ProblemList({ problems }: { problems: Problem[] }) {
               transition={{ delay: i * 0.03 }}
               className="flex items-center gap-4 p-4 bg-surface-800/30 rounded-xl border border-surface-700/30 hover:border-surface-700/60 transition-colors"
             >
-              {problem.status === 'SOLVED' ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-              ) : (
-                <Circle className="w-5 h-5 text-surface-500 shrink-0" />
-              )}
+              <button
+                onClick={() => handleMarkSolved(problem)}
+                disabled={problem.status === 'SOLVED' || solvingId === problem.problemId}
+                className="shrink-0 focus:outline-none"
+                title={problem.status === 'SOLVED' ? 'Already solved' : 'Mark as solved'}
+              >
+                {solvingId === problem.problemId ? (
+                  <Loader2 className="w-5 h-5 text-accent-400 animate-spin" />
+                ) : problem.status === 'SOLVED' ? (
+                  <CheckCircle2 className="w-5 h-5 text-surface-400" />
+                ) : (
+                  <Circle className="w-5 h-5 text-surface-500 hover:text-accent-400 transition-colors" />
+                )}
+              </button>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{problem.problemName}</p>
                 <p className="text-xs text-surface-500 mt-0.5">

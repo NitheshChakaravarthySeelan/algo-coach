@@ -56,7 +56,7 @@ export function DashboardPreview() {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="glass-card p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 p-2">
+                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-surface-500 to-surface-300 p-2">
                         <Flame className="w-full h-full text-white" />
                       </div>
                       <div>
@@ -66,7 +66,7 @@ export function DashboardPreview() {
                     </div>
                     <div className="w-full bg-surface-800 rounded-full h-1.5">
                       <div
-                        className="bg-gradient-to-r from-amber-400 to-orange-500 h-1.5 rounded-full"
+                        className="bg-gradient-to-r from-surface-500 to-surface-300 h-1.5 rounded-full"
                         style={{ width: `${(streak / 30) * 100}%` }}
                       />
                     </div>
@@ -75,7 +75,7 @@ export function DashboardPreview() {
 
                   <div className="glass-card p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 p-2">
+                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-surface-400 to-surface-200 p-2">
                         <CheckCircle className="w-full h-full text-white" />
                       </div>
                       <div>
@@ -88,7 +88,7 @@ export function DashboardPreview() {
 
                   <div className="glass-card p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent-400 to-purple-500 p-2">
+                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 p-2">
                         <Target className="w-full h-full text-white" />
                       </div>
                       <div>
@@ -101,7 +101,7 @@ export function DashboardPreview() {
 
                   <div className="glass-card p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-500 p-2">
+                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-surface-500 to-surface-300 p-2">
                         <TrendingUp className="w-full h-full text-white" />
                       </div>
                       <div>
@@ -123,8 +123,8 @@ export function DashboardPreview() {
                         <AreaChart data={monthlyProgress}>
                           <defs>
                             <linearGradient id="colorSolved" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                              <stop offset="5%" stopColor="#666666" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#666666" stopOpacity={0} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#1e2436" />
@@ -142,7 +142,7 @@ export function DashboardPreview() {
                           <Area
                             type="monotone"
                             dataKey="solved"
-                            stroke="#6366f1"
+                            stroke="#666666"
                             fill="url(#colorSolved)"
                             strokeWidth={2}
                           />
@@ -181,7 +181,7 @@ export function DashboardPreview() {
                           }`}
                           style={{
                             background: day.completed
-                              ? `linear-gradient(to top, rgba(99,102,241,0.4) ${day.count * 15}%, rgba(30,36,54,1) ${day.count * 15}%)`
+                              ? `linear-gradient(to top, rgba(120,120,120,0.4) ${day.count * 15}%, rgba(30,36,54,1) ${day.count * 15}%)`
                               : undefined,
                           }}
                         />

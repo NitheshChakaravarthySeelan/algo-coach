@@ -6,7 +6,7 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-purple-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center">
               <Code2 className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-lg text-white">AlgoCoach</span>
@@ -19,8 +19,8 @@ export function Footer() {
             <a href="#dashboard" className="text-sm text-surface-400 hover:text-white transition-colors">
               Dashboard
             </a>
-            <a href="#waitlist" className="text-sm text-surface-400 hover:text-white transition-colors">
-              Waitlist
+            <a href="/dashboard" className="text-sm text-surface-400 hover:text-white transition-colors">
+              Sign In
             </a>
 
           </div>

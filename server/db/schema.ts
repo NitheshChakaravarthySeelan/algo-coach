@@ -4,6 +4,7 @@ import {
   boolean,
   timestamp,
   integer,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -57,19 +58,6 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const waitlistEntry = pgTable("waitlist_entry", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").references(() => user.id),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  leetcodeUsername: text("leetcode_username"),
-  experience: text("experience").notNull(),
-  struggles: text("struggles"),
-  desiredFeature: text("desired_feature"),
-  goals: text("goals"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
 export const surveyResponse = pgTable("survey_response", {
   id: text("id").primaryKey(),
   email: text("email").notNull(),
@@ -100,5 +88,36 @@ export const dailyProgress = pgTable("daily_progress", {
   problemId: text("problem_id").notNull(),
   topics: text("topics").array().notNull(),
   status: text("status").notNull().default("IN_PROGRESS"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const userPreferences = pgTable("user_preferences", {
+  userId: text("user_id").primaryKey().references(() => user.id),
+  experienceLevel: text("experience_level").notNull(),
+  goals: text("goals").array().notNull(),
+  weakTopics: text("weak_topics").array().notNull(),
+  targetCompanies: text("target_companies").array(),
+  hoursPerWeek: integer("hours_per_week").notNull(),
+  targetDate: timestamp("target_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const roadmapPlan = pgTable("roadmap_plan", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id),
+  weeks: jsonb("weeks").notNull(),
+  currentWeek: integer("current_week").notNull().default(1),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const dailyPlan = pgTable("daily_plan", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id),
+  date: timestamp("date").notNull(),
+  weekNumber: integer("week_number").notNull(),
+  topic: text("topic").notNull(),
+  problems: jsonb("problems").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

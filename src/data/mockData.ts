@@ -119,10 +119,10 @@ export const mockWaitlistData: WaitlistEntry[] = [
 ]
 
 export const experienceDistribution = [
-  { name: 'Beginner', value: 35, color: '#818cf8' },
-  { name: 'Intermediate', value: 40, color: '#6366f1' },
-  { name: 'Advanced', value: 18, color: '#4f46e5' },
-  { name: 'Competitive', value: 7, color: '#3730a3' },
+  { name: 'Beginner', value: 35, color: '#999999' },
+  { name: 'Intermediate', value: 40, color: '#777777' },
+  { name: 'Advanced', value: 18, color: '#555555' },
+  { name: 'Competitive', value: 7, color: '#333333' },
 ]
 
 export const painPointData = [
@@ -136,11 +136,11 @@ export const painPointData = [
 ]
 
 export const goalDistribution = [
-  { name: 'Job Interviews', value: 45, color: '#818cf8' },
-  { name: 'LeetCode Rating', value: 20, color: '#6366f1' },
-  { name: 'Competitive Programming', value: 15, color: '#4f46e5' },
-  { name: 'General Problem Solving', value: 10, color: '#3730a3' },
-  { name: 'FAANG Preparation', value: 40, color: '#312e81' },
+  { name: 'Job Interviews', value: 45, color: '#999999' },
+  { name: 'LeetCode Rating', value: 20, color: '#777777' },
+  { name: 'Competitive Programming', value: 15, color: '#555555' },
+  { name: 'General Problem Solving', value: 10, color: '#444444' },
+  { name: 'FAANG Preparation', value: 40, color: '#333333' },
 ]
 
 export const requestedFeatures = [
