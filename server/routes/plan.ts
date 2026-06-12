@@ -97,7 +97,11 @@ app.post('/today', async (c) => {
 
     return c.json({ success: true, data: { ...entry, explanation: task.explanation } }, 201)
   } catch (err: any) {
-    return c.json({ success: false, error: err.message || 'Failed to generate daily plan' }, 500)
+    const msg = err.message || ''
+    if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
+      return c.json({ success: false, error: 'AI quota reached. Please try again in a minute.', retryAfter: 60 }, 429)
+    }
+    return c.json({ success: false, error: 'Failed to generate daily plan' }, 500)
   }
 })
 

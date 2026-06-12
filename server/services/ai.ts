@@ -57,7 +57,7 @@ export async function generateRoadmap(preferences: UserPreferences): Promise<Roa
   if (!genAI) throw new Error("GEMINI_API_KEY not configured")
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemma-3-12b-it",
     generationConfig: {
       temperature: 0.7,
       responseMimeType: "application/json",
@@ -125,7 +125,7 @@ export async function generateDailyTask(params: {
 }): Promise<DailyTask> {
   if (!genAI) throw new Error("GEMINI_API_KEY not configured")
 
-  const { roadmap, currentWeek, progress, dedupCount, solvedSlugs } = params
+  const { roadmap, currentWeek, dedupCount, solvedSlugs } = params
   const week = roadmap[currentWeek - 1]
   if (!week) throw new Error(`Week ${currentWeek} not found in roadmap`)
 
@@ -133,75 +133,30 @@ export async function generateDailyTask(params: {
     .filter(([, count]) => count >= 3)
     .map(([slug]) => slug)
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
-    generationConfig: { temperature: 0.7 },
+  const exclude = [...new Set([...overusedSlugs, ...solvedSlugs])]
+
+  const searchResults = await searchLeetCodeProblems({
+    topics: [week.topic],
+    excludeSlugs: exclude,
+    limit: 15,
   })
 
-  const prompt = `You are a LeetCode coach creating today's practice plan.
-
-Current week: ${currentWeek}
-Focus topic: ${week.topic}
-Week description: ${week.description}
-
-Problems already solved by the user: ${solvedSlugs.join(", ") || "none"}
-Problems that have been suggested 3+ times (DO NOT suggest these): ${overusedSlugs.join(", ") || "none"}
-
-Use the search_leetcode_problems tool to find real LeetCode problems for the focus topic "${week.topic}".
-Select 3 problems that:
-1. Are directly relevant to "${week.topic}"
-2. Progress from easier to harder within the topic
-3. Have NOT been solved by the user
-4. Are NOT in the overused list
-5. Cover different subtopics within "${week.topic}" if possible
-
-After getting search results, pick the best 3 and return them.`
-
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    tools: [searchTool],
-  })
-
-  const response = result.response
-  const toolCalls = response.functionCalls()
-
-  let searchResults: LeetCodeProblem[] = []
-
-  if (toolCalls && toolCalls.length > 0) {
-    for (const call of toolCalls) {
-      if (call.name === "search_leetcode_problems") {
-        const args = call.args as {
-          topics: string[]
-          difficulty?: "EASY" | "MEDIUM" | "HARD"
-          excludeSlugs?: string[]
-        }
-        const exclude = [...new Set([
-          ...(args.excludeSlugs || []),
-          ...overusedSlugs,
-          ...solvedSlugs,
-        ])]
-        searchResults = await searchLeetCodeProblems({
-          topics: args.topics,
-          difficulty: args.difficulty,
-          excludeSlugs: exclude,
-          limit: 10,
-        })
-      }
+  if (!searchResults.length) {
+    return {
+      problems: [],
+      explanation: `No unsolved problems found for ${week.topic}. Try a different topic or reset progress.`,
     }
   }
 
-  if (!searchResults.length) {
-    searchResults = await searchLeetCodeProblems({
-      topics: [week.topic],
-      excludeSlugs: [...overusedSlugs, ...solvedSlugs],
-      limit: 10,
-    })
-  }
+  const model = genAI.getGenerativeModel({
+    model: "gemma-3-12b-it",
+    generationConfig: { temperature: 0.5, responseMimeType: "application/json" },
+  })
 
-  const selectionPrompt = `You are a LeetCode coach. From the following real LeetCode problems, select the best 3 for today's practice.
+  const prompt = `You are a LeetCode coach. From the following real LeetCode problems, select the best 3 for today's practice.
 
-Focus topic: ${week.topic}
-User's solved problems: ${solvedSlugs.join(", ") || "none"}
+Focus topic: ${week.topic} (week ${currentWeek})
+${week.description ? `Week goal: ${week.description}` : ''}
 
 Available problems:
 ${JSON.stringify(searchResults, null, 2)}
@@ -210,21 +165,13 @@ Select 3 problems that:
 1. Are most relevant to "${week.topic}"
 2. Progress from easier to harder
 3. Cover different aspects of the topic
-4. Have NOT been solved by the user
 
-Return JSON with: problems (array of {title, titleSlug, difficulty, topicTags, leetcodeUrl, acRate}) and explanation (string describing why these were chosen).`
+Return JSON: { problems: [{title, titleSlug, difficulty, topicTags: string[], leetcodeUrl, acRate}], explanation: string }`
 
-  const selectionResult = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: selectionPrompt }] }],
-    generationConfig: {
-      temperature: 0.5,
-      responseMimeType: "application/json",
-    },
-  })
-
-  const selectionText = selectionResult.response.text()
   try {
-    const parsed = JSON.parse(selectionText)
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+    const parsed = JSON.parse(text)
     return {
       problems: (parsed.problems || []).map((p: Record<string, unknown>) => ({
         title: p.title as string,

@@ -52,24 +52,30 @@ app.post('/', async (c) => {
       set: { ...prefs, updatedAt: new Date() },
     })
 
-    const roadmap = await generateRoadmap({
-      experienceLevel: parsed.experienceLevel,
-      goals: parsed.goals,
-      weakTopics: parsed.weakTopics,
-      targetCompanies: parsed.targetCompanies,
-      hoursPerWeek: parsed.hoursPerWeek,
-      targetDate: parsed.targetDate,
+    const existingPlan = await db.query.roadmapPlan.findFirst({
+      where: eq(roadmapPlan.userId, userId),
     })
 
-    await db.insert(roadmapPlan).values({
-      id: crypto.randomUUID(),
-      userId,
-      weeks: JSON.parse(JSON.stringify(roadmap)),
-      currentWeek: 1,
-    }).onConflictDoUpdate({
-      target: roadmapPlan.userId,
-      set: { weeks: JSON.parse(JSON.stringify(roadmap)), currentWeek: 1, updatedAt: new Date() },
-    })
+    let roadmap
+    if (!existingPlan) {
+      roadmap = await generateRoadmap({
+        experienceLevel: parsed.experienceLevel,
+        goals: parsed.goals,
+        weakTopics: parsed.weakTopics,
+        targetCompanies: parsed.targetCompanies,
+        hoursPerWeek: parsed.hoursPerWeek,
+        targetDate: parsed.targetDate,
+      })
+
+      await db.insert(roadmapPlan).values({
+        id: crypto.randomUUID(),
+        userId,
+        weeks: JSON.parse(JSON.stringify(roadmap)),
+        currentWeek: 1,
+      })
+    } else {
+      roadmap = existingPlan.weeks
+    }
 
     return c.json({ success: true, data: { roadmap } }, 201)
   } catch (err: any) {
