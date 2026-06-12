@@ -9,7 +9,7 @@ import planRoutes from './routes/plan'
 
 const app = new Hono()
 
-const productionUrl = 'https://algo-coach.netlify.app'
+const productionUrl = process.env.BETTER_AUTH_URL || 'https://algo-coach.netlify.app'
 
 app.use('/*', cors({
   origin: ['http://localhost:5173', 'http://localhost:3000', productionUrl],

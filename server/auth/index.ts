@@ -4,7 +4,7 @@ import { db } from '../db'
 import * as schema from '../db/schema'
 import { sendVerificationEmail } from '../lib/email'
 
-const productionUrl = 'https://algo-coach.netlify.app'
+const productionUrl = process.env.BETTER_AUTH_URL || 'https://algo-coach.netlify.app'
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
