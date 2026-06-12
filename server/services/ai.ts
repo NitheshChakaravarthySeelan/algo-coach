@@ -8,7 +8,7 @@ if (!API_KEY) {
 
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null
 
-function extractJson(text: string): string {
+export function extractJson(text: string): string {
   const firstBrace = text.indexOf("{")
   const firstBracket = text.indexOf("[")
   const start = firstBrace === -1 ? firstBracket : firstBracket === -1 ? firstBrace : Math.min(firstBrace, firstBracket)
