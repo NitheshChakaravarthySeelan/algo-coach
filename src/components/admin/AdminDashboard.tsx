@@ -56,7 +56,7 @@ export function AdminDashboard() {
         >
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">Admin Analytics</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-surface-50">Admin Analytics</h1>
               <div className="px-2.5 py-1 bg-accent-500/10 border border-accent-500/20 rounded-full text-xs text-accent-400">
                 {entries.length > 0 ? 'Live' : 'Mock'}
               </div>
@@ -81,7 +81,7 @@ export function AdminDashboard() {
                 <Users className="w-5 h-5 text-accent-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{entries.length}</div>
+                <div className="text-2xl font-bold text-surface-50">{entries.length}</div>
                 <div className="text-xs text-surface-400">Total Signups</div>
               </div>
             </div>
@@ -94,7 +94,7 @@ export function AdminDashboard() {
                 <TrendingUp className="w-5 h-5 text-accent-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{entries.length > 0 ? '100%' : '95%'}</div>
+                <div className="text-2xl font-bold text-surface-50">{entries.length > 0 ? '100%' : '95%'}</div>
                 <div className="text-xs text-surface-400">Conversion Rate</div>
               </div>
             </div>
@@ -107,7 +107,7 @@ export function AdminDashboard() {
                 <BarChart3 className="w-5 h-5 text-accent-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{painPoints.length}</div>
+                <div className="text-2xl font-bold text-surface-50">{painPoints.length}</div>
                 <div className="text-xs text-surface-400">Pain Points</div>
               </div>
             </div>
@@ -120,7 +120,7 @@ export function AdminDashboard() {
                 <Target className="w-5 h-5 text-surface-300" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{goalDist.length}</div>
+                <div className="text-2xl font-bold text-surface-50">{goalDist.length}</div>
                 <div className="text-xs text-surface-400">Goal Categories</div>
               </div>
             </div>

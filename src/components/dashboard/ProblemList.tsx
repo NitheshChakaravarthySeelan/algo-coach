@@ -44,7 +44,7 @@ export function ProblemList({ problems, onRefresh }: { problems: Problem[]; onRe
   return (
     <div className="glass-card p-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <h3 className="text-lg font-semibold text-white">Problem Log</h3>
+        <h3 className="text-lg font-semibold text-surface-50">Problem Log</h3>
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
@@ -61,7 +61,7 @@ export function ProblemList({ problems, onRefresh }: { problems: Problem[]; onRe
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                  filter === f ? 'bg-accent-600 text-white' : 'text-surface-400 hover:text-white'
+                  filter === f ? 'bg-accent-600 text-white' : 'text-surface-400 hover:text-surface-50'
                 }`}
               >
                 {f === 'ALL' ? 'All' : f === 'IN_PROGRESS' ? 'Active' : 'Solved'}
@@ -102,7 +102,7 @@ export function ProblemList({ problems, onRefresh }: { problems: Problem[]; onRe
                 )}
               </button>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{problem.problemName}</p>
+                <p className="text-sm font-medium text-surface-50 truncate">{problem.problemName}</p>
                 <p className="text-xs text-surface-500 mt-0.5">
                   {new Date(problem.date).toLocaleDateString()}
                 </p>

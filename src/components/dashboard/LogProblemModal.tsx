@@ -70,9 +70,9 @@ export function LogProblemModal({ open, onClose, onSuccess }: LogProblemModalPro
                   <div className="w-10 h-10 rounded-xl bg-accent-500/10 flex items-center justify-center">
                     <Plus className="w-5 h-5 text-accent-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">Log Problem</h3>
+                  <h3 className="text-lg font-semibold text-surface-50">Log Problem</h3>
                 </div>
-                <button onClick={onClose} className="text-surface-400 hover:text-white p-1">
+                <button onClick={onClose} className="text-surface-400 hover:text-surface-50 p-1">
                   <X className="w-5 h-5" />
                 </button>
               </div>

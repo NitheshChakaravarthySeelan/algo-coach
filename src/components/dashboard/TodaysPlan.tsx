@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Target, Sparkles, ExternalLink, Loader2, RefreshCw, CheckCircle2, RotateCw, Lightbulb } from 'lucide-react'
+import { Target, Sparkles, ExternalLink, RefreshCw, CheckCircle2, RotateCw, Lightbulb, AlertCircle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/Button'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 interface Problem {
   title: string
@@ -42,9 +43,11 @@ export function TodaysPlan() {
   const [markingSlug, setMarkingSlug] = useState<string | null>(null)
   const [regeneratingSlot, setRegeneratingSlot] = useState<number | null>(null)
   const [easierSlug, setEasierSlug] = useState<string | null>(null)
+  const [error, setError] = useState('')
 
   async function fetchPlan() {
     setLoading(true)
+    setError('')
     try {
       const res = await api.plan.today.get()
       if (res.exists && res.data) {
@@ -54,7 +57,8 @@ export function TodaysPlan() {
         setPlan(null)
         setExists(false)
       }
-    } catch {
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load today\'s plan')
       setPlan(null)
       setExists(false)
     } finally {
@@ -64,13 +68,15 @@ export function TodaysPlan() {
 
   async function generatePlan() {
     setGenerating(true)
+    setError('')
     try {
       const res = await api.plan.today.generate(difficultyFilter)
       if (res.success) {
         setPlan(res.data)
         setExists(true)
       }
-    } catch {
+    } catch (e: any) {
+      setError(e?.message || 'Failed to generate plan')
     } finally {
       setGenerating(false)
     }
@@ -92,7 +98,8 @@ export function TodaysPlan() {
           ),
         }
       })
-    } catch {
+    } catch (e: any) {
+      setError(e?.message || 'Failed to update problem status')
     } finally {
       setMarkingSlug(null)
     }
@@ -101,6 +108,7 @@ export function TodaysPlan() {
   async function regenerateSlot(slot: number) {
     if (!plan) return
     setRegeneratingSlot(slot)
+    setError('')
     try {
       const res = await api.plan.today.regenerate(plan.id, slot)
       if (res.success) {
@@ -109,7 +117,8 @@ export function TodaysPlan() {
           return { ...prev, problems: res.data.problems }
         })
       }
-    } catch {
+    } catch (e: any) {
+      setError(e?.message || 'Failed to replace problem')
     } finally {
       setRegeneratingSlot(null)
     }
@@ -118,6 +127,7 @@ export function TodaysPlan() {
   async function onEasierProblem(slug: string, slot: number) {
     if (!plan) return
     setEasierSlug(slug)
+    setError('')
     try {
       const res = await api.plan.today.regenerate(plan.id, slot, true)
       if (res.success) {
@@ -126,7 +136,8 @@ export function TodaysPlan() {
           return { ...prev, problems: res.data.problems }
         })
       }
-    } catch {
+    } catch (e: any) {
+      setError(e?.message || 'Failed to find easier problem')
     } finally {
       setEasierSlug(null)
     }
@@ -135,6 +146,7 @@ export function TodaysPlan() {
   async function regenerateAll() {
     if (!plan) return
     setGenerating(true)
+    setError('')
     try {
       const res = await api.plan.today.regenerate(plan.id)
       if (res.success) {
@@ -143,7 +155,8 @@ export function TodaysPlan() {
           return { ...prev, problems: res.data.problems }
         })
       }
-    } catch {
+    } catch (e: any) {
+      setError(e?.message || 'Failed to regenerate')
     } finally {
       setGenerating(false)
     }
@@ -154,8 +167,25 @@ export function TodaysPlan() {
   if (loading) {
     return (
       <div className="glass-card p-6">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 text-accent-400 animate-spin" />
+        <div className="flex items-center gap-2 mb-6">
+          <Skeleton className="w-5 h-5" />
+          <Skeleton className="h-5 w-32" />
+        </div>
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="p-4 rounded-xl bg-surface-800/30 border border-surface-700/30">
+              <div className="flex items-start gap-3">
+                <Skeleton className="w-5 h-5 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-14" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     )
@@ -167,19 +197,30 @@ export function TodaysPlan() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Target className="w-5 h-5 text-accent-400" />
-            <h3 className="text-lg font-semibold text-white">Today's Plan</h3>
+            <h3 className="text-lg font-semibold text-surface-200">Today's Plan</h3>
           </div>
           <DifficultySelector value={difficultyFilter} onChange={setDifficultyFilter} />
         </div>
         <div className="text-center py-8">
-          <Sparkles className="w-12 h-12 text-surface-600 mx-auto mb-3" />
+          <div className="w-16 h-16 rounded-2xl bg-accent-500/10 flex items-center justify-center mx-auto mb-4">
+            <Target className="w-8 h-8 text-accent-400" />
+          </div>
           <p className="text-surface-400 text-sm mb-1">No plan for today yet</p>
-          <p className="text-surface-500 text-xs mb-4">
-            {difficultyFilter === 'MIXED' ? 'Will pick 1 Easy + 1 Medium + 1 Hard' : `Will pick 3 ${difficultyFilter.toLowerCase()} problems`}
+          <p className="text-surface-500 text-xs mb-5">
+            {difficultyFilter === 'MIXED'
+              ? 'Get a curated set of 1 Easy + 1 Medium + 1 Hard problem'
+              : `Get 3 ${difficultyFilter.toLowerCase()} problems to solve today`}
           </p>
           <Button onClick={generatePlan} disabled={generating}>
-            {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : 'Generate Today\'s Plan'}
+            {generating ? <><RefreshCw className="w-4 h-4 animate-spin" /> Generating...</> : <Sparkles className="w-4 h-4" />}
+            Generate Today's Plan
           </Button>
+          {error && (
+            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 text-left flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -194,7 +235,7 @@ export function TodaysPlan() {
         <div className="flex items-center gap-2">
           <Target className="w-5 h-5 text-accent-400" />
           <div>
-            <h3 className="text-lg font-semibold text-white">Today's Plan</h3>
+            <h3 className="text-lg font-semibold text-surface-200">Today's Plan</h3>
             <p className="text-xs text-surface-500">Week {plan.weekNumber} — {plan.topic}</p>
           </div>
         </div>
@@ -209,11 +250,18 @@ export function TodaysPlan() {
             <RefreshCw className="w-4 h-4" />
           </Button>
           <Button size="sm" onClick={regenerateAll} disabled={generating}>
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             <span className="hidden sm:inline ml-1.5">Regenerate</span>
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {plan.explanation && (
         <p className="text-sm text-surface-400 mb-4">{plan.explanation}</p>
@@ -248,7 +296,7 @@ export function TodaysPlan() {
                     title="Toggle solved"
                   >
                     {isMarking ? (
-                      <Loader2 className="w-5 h-5 text-accent-400 animate-spin" />
+                      <RefreshCw className="w-5 h-5 text-accent-400 animate-spin" />
                     ) : status === 'SOLVED' ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     ) : (
@@ -262,7 +310,7 @@ export function TodaysPlan() {
                     title="Replace this problem"
                   >
                     {isRegenerating ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <RefreshCw className="w-3 h-3 animate-spin" />
                     ) : (
                       <RotateCw className="w-3 h-3" />
                     )}
@@ -275,7 +323,7 @@ export function TodaysPlan() {
                       href={problem.leetcodeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm font-medium text-white hover:text-accent-400 transition-colors"
+                      className="text-sm font-medium text-surface-200 hover:text-accent-400 transition-colors"
                     >
                       {problem.title}
                     </a>
@@ -355,7 +403,7 @@ export function TodaysPlan() {
                       disabled={easierSlug === problem.titleSlug}
                       className="px-2 py-1 text-xs rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
                     >
-                      {easierSlug === problem.titleSlug ? <Loader2 className="w-3 h-3 animate-spin" /> : 'I\'m stuck'}
+                      {easierSlug === problem.titleSlug ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'I\'m stuck'}
                     </button>
                   )}
                 </div>

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, GitBranch, Sun, Moon, Flame, History, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react'
+import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, GitBranch, Sun, Moon, Flame, History, ChevronDown, ChevronRight, ExternalLink, AlertTriangle } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { useSession } from '@/lib/use-session'
 import { api } from '@/lib/api'
 import { useTheme } from '@/lib/theme'
 import { Button } from '@/components/ui/Button'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { StatsCards } from '@/components/dashboard/StatsCards'
 import { ProblemList } from '@/components/dashboard/ProblemList'
 import { LogProblemModal } from '@/components/dashboard/LogProblemModal'
@@ -29,21 +30,31 @@ export function Dashboard() {
   const [streak, setStreak] = useState<{ currentStreak: number; longestStreak: number; solvedToday: boolean } | null>(null)
   const [history, setHistory] = useState<any[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [planExists, setPlanExists] = useState(false)
+  const [planNotDone, setPlanNotDone] = useState(false)
 
   async function loadData() {
     setLoading(true)
     setError('')
     try {
-      const [statsRes, problemsRes, streakRes, historyRes] = await Promise.all([
+      const [statsRes, problemsRes, streakRes, historyRes, planRes] = await Promise.all([
         api.leetcode.stats().catch(() => null),
         api.leetcode.listProblems().catch(() => ({ success: false, data: [] as any[] })),
         api.plan.streak().catch(() => null),
         api.plan.history().catch(() => ({ success: false, data: [] as any[] })),
+        api.plan.today.get().catch(() => ({ exists: false })),
       ])
       setStats(statsRes?.data ?? null)
       setProblems(problemsRes?.data ?? [])
       setStreak(streakRes?.data ?? null)
       setHistory(historyRes?.data ?? [])
+      if (planRes.exists && planRes.data) {
+        setPlanExists(true)
+        setPlanNotDone(!planRes.data.problems.every((p: any) => p.status === 'SOLVED'))
+      } else {
+        setPlanExists(false)
+        setPlanNotDone(false)
+      }
     } catch {
       setError('Failed to load data')
     } finally {
@@ -95,19 +106,19 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-surface-950">
-      <nav className="sticky top-0 z-40 bg-surface-950/80 backdrop-blur-xl border-b border-surface-800/50">
+      <nav className="sticky top-0 z-40 bg-surface-950/80 backdrop-blur-xl border-b border-surface-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center">
                 <Code2 className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-lg text-white">AlgoCoach</span>
+              <span className="font-bold text-lg text-surface-200">AlgoCoach</span>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleTheme}
-                className="p-2 text-surface-400 hover:text-white transition-colors"
+                className="p-2 text-surface-400 hover:text-surface-200 transition-colors"
                 title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -136,7 +147,7 @@ export function Dashboard() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">
+              <h1 className="text-2xl font-bold text-surface-200">
                 Welcome, {session.user.name || 'Coder'}
               </h1>
               <p className="text-surface-400 mt-1">Track your LeetCode progress</p>
@@ -157,14 +168,40 @@ export function Dashboard() {
         </motion.div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
-            {error}
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {planExists && planNotDone && (
+          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-sm text-amber-400 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>Today's problems not done yet — keep going!</span>
           </div>
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-accent-400 animate-spin" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="glass-card p-5">
+                <Skeleton className="w-10 h-10 rounded-xl mb-3" />
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            ))}
+            <div className="md:col-span-4 glass-card p-6">
+              <Skeleton className="h-4 w-24 mb-6" />
+              <div className="flex justify-around">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex flex-col items-center gap-2">
+                    <Skeleton className="w-24 h-24 rounded-full" />
+                    <Skeleton className="h-8 w-12" />
+                    <Skeleton className="h-4 w-10" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : stats ? (
           <>
@@ -207,7 +244,7 @@ export function Dashboard() {
               >
                 <div className="flex items-center gap-2">
                   <History className="w-5 h-5 text-surface-400" />
-                  <h3 className="text-lg font-semibold text-white">Solved History</h3>
+                  <h3 className="text-lg font-semibold text-surface-200">Solved History</h3>
                   <span className="text-xs text-surface-500">({history.length})</span>
                 </div>
                 {showHistory ? <ChevronDown className="w-4 h-4 text-surface-400" /> : <ChevronRight className="w-4 h-4 text-surface-400" />}
@@ -215,7 +252,12 @@ export function Dashboard() {
               {showHistory && (
                 <div className="mt-4 space-y-2 max-h-80 overflow-y-auto">
                   {history.length === 0 ? (
-                    <p className="text-sm text-surface-500 text-center py-4">No solved problems yet. Start solving!</p>
+                    <div className="text-center py-8">
+                      <div className="w-12 h-12 rounded-xl bg-surface-800/50 flex items-center justify-center mx-auto mb-3">
+                        <History className="w-6 h-6 text-surface-500" />
+                      </div>
+                      <p className="text-sm text-surface-500">No problems solved yet. Start solving!</p>
+                    </div>
                   ) : (
                     history.map((item: any, i: number) => (
                       <div key={`${item.titleSlug}-${i}`} className="flex items-center gap-3 p-3 bg-surface-800/20 rounded-lg">
@@ -265,7 +307,7 @@ export function Dashboard() {
               <div className="w-16 h-16 rounded-2xl bg-accent-500/10 flex items-center justify-center mx-auto mb-6">
                 <GitBranch className="w-8 h-8 text-accent-400" />
               </div>
-              <h2 className="text-xl font-semibold text-white mb-2">Link Your LeetCode Profile</h2>
+              <h2 className="text-xl font-semibold text-surface-200 mb-2">Link Your LeetCode Profile</h2>
               <p className="text-sm text-surface-400 mb-6">
                 Connect your LeetCode account to start tracking your progress and get personalized recommendations.
               </p>

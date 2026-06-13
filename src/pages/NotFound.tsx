@@ -14,7 +14,7 @@ export function NotFound() {
         <div className="w-16 h-16 rounded-2xl bg-accent-500/10 flex items-center justify-center mx-auto mb-6">
           <Code2 className="w-8 h-8 text-accent-400" />
         </div>
-        <h1 className="text-6xl font-bold text-white mb-4">404</h1>
+        <h1 className="text-6xl font-bold text-surface-50 mb-4">404</h1>
         <p className="text-surface-400 mb-8">
           Page not found. The page you're looking for doesn't exist.
         </p>

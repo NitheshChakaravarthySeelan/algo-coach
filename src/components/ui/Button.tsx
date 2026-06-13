@@ -15,7 +15,7 @@ const variants = {
     'bg-accent-600 hover:bg-accent-500 text-white shadow-lg shadow-accent-500/20 hover:shadow-accent-500/30',
   secondary:
     'bg-surface-800 hover:bg-surface-700 text-surface-200 border border-surface-700/50',
-  ghost: 'text-surface-400 hover:text-white hover:bg-surface-800/50',
+  ghost: 'text-surface-400 hover:text-surface-50 hover:bg-surface-800/50',
   outline:
     'border border-accent-500/50 text-accent-400 hover:bg-accent-500/10 hover:border-accent-400',
 }

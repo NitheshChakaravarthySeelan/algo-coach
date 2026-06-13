@@ -124,7 +124,7 @@ export function Onboard() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center">
             <Code2 className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-xl text-white">AlgoCoach</span>
+          <span className="font-bold text-xl text-surface-50">AlgoCoach</span>
         </div>
 
         <div className="flex items-center justify-center gap-2 mb-8">
@@ -149,7 +149,7 @@ export function Onboard() {
             {step === 0 && (
               <motion.div key="step0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1">What's your experience level?</h2>
+                  <h2 className="text-xl font-bold text-surface-50 mb-1">What's your experience level?</h2>
                   <p className="text-sm text-surface-400">This helps us tailor the difficulty of your plan.</p>
                 </div>
                 <div className="space-y-3">
@@ -163,7 +163,7 @@ export function Onboard() {
                           : 'bg-surface-800/50 border-surface-700/50 hover:border-surface-600'
                       }`}
                     >
-                      <div className="font-medium text-white">{opt.label}</div>
+                      <div className="font-medium text-surface-50">{opt.label}</div>
                       <div className="text-xs text-surface-400 mt-0.5">{opt.desc}</div>
                     </button>
                   ))}
@@ -174,7 +174,7 @@ export function Onboard() {
             {step === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1">What are your goals?</h2>
+                  <h2 className="text-xl font-bold text-surface-50 mb-1">What are your goals?</h2>
                   <p className="text-sm text-surface-400">Select all that apply.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -208,7 +208,7 @@ export function Onboard() {
             {step === 2 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1">Which topics are your weaknesses?</h2>
+                  <h2 className="text-xl font-bold text-surface-50 mb-1">Which topics are your weaknesses?</h2>
                   <p className="text-sm text-surface-400">The plan will prioritize these topics.</p>
                 </div>
                 <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto">
@@ -242,7 +242,7 @@ export function Onboard() {
             {step === 3 && (
               <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1">Your commitment</h2>
+                  <h2 className="text-xl font-bold text-surface-50 mb-1">Your commitment</h2>
                   <p className="text-sm text-surface-400">How much time can you dedicate each week?</p>
                 </div>
                 <div className="space-y-4">

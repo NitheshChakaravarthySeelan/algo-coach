@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { BookOpen, ChevronRight, Loader2, Sparkles, RefreshCw, CheckCircle2, Trophy, ArrowRight } from 'lucide-react'
+import { BookOpen, ChevronRight, Sparkles, RefreshCw, CheckCircle2, Trophy, ArrowRight, AlertCircle, MapPin } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/Button'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 interface RoadmapWeek {
   week: number
@@ -34,10 +35,12 @@ export function RoadmapOverview() {
   const [generating, setGenerating] = useState(false)
   const [advancing, setAdvancing] = useState(false)
   const [genError, setGenError] = useState('')
+  const [error, setError] = useState('')
   const [streamText, setStreamText] = useState('')
   const streamRef = useRef('')
 
   const fetchAll = useCallback(async () => {
+    setError('')
     try {
       const res = await api.plan.roadmap()
       setRoadmap(res.data)
@@ -46,7 +49,9 @@ export function RoadmapOverview() {
         const pRes = await api.plan.roadmapProgress()
         if (pRes.success) setProgress(pRes.data)
       } catch {}
-    } catch {}
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load roadmap')
+    }
   }, [])
 
   const fetchRoadmap = useCallback(() => {
@@ -57,6 +62,7 @@ export function RoadmapOverview() {
   const generate = useCallback((force = false) => {
     setGenerating(true)
     setGenError('')
+    setError('')
     setStreamText('')
     streamRef.current = ''
 
@@ -103,26 +109,67 @@ export function RoadmapOverview() {
   if (loading) {
     return (
       <div className="glass-card p-6">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 text-accent-400 animate-spin" />
+        <div className="flex items-center gap-2 mb-6">
+          <Skeleton className="w-5 h-5" />
+          <Skeleton className="h-5 w-32" />
+        </div>
+        <div className="space-y-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-4 p-3">
+              <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-3 w-56" />
+                <Skeleton className="h-1.5 w-full" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     )
   }
 
-  if (!roadmap) return null
+  if (!roadmap) {
+    return (
+      <div className="glass-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <BookOpen className="w-5 h-5 text-accent-400" />
+          <h3 className="text-lg font-semibold text-surface-200">Your Roadmap</h3>
+        </div>
+        <div className="text-center py-8">
+          <div className="w-16 h-16 rounded-2xl bg-accent-500/10 flex items-center justify-center mx-auto mb-4">
+            <MapPin className="w-8 h-8 text-accent-400" />
+          </div>
+          <p className="text-surface-400 text-sm mb-1">No roadmap yet</p>
+          <p className="text-surface-500 text-xs mb-5">
+            Create a personalized study roadmap tailored to your goals
+          </p>
+          <Button onClick={() => generate()} disabled={generating}>
+            {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            Build Your Roadmap
+          </Button>
+          {error && (
+            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 text-left flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   if (!roadmap.ready) {
     return (
       <div className="glass-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <BookOpen className="w-5 h-5 text-accent-400" />
-          <h3 className="text-lg font-semibold text-white">Your Roadmap</h3>
+          <h3 className="text-lg font-semibold text-surface-200">Your Roadmap</h3>
         </div>
         <div className="text-center py-8">
           {generating ? (
             <>
-              <Loader2 className="w-10 h-10 text-accent-400 mx-auto mb-3 animate-spin" />
+              <RefreshCw className="w-10 h-10 text-accent-400 mx-auto mb-3 animate-spin" />
               <p className="text-surface-400 text-sm mb-2">Generating your personalized roadmap...</p>
               {streamText && (
                 <pre className="text-xs text-surface-500 text-left max-h-32 overflow-y-auto bg-surface-900/50 rounded-lg p-3 mx-auto max-w-md whitespace-pre-wrap">
@@ -132,11 +179,11 @@ export function RoadmapOverview() {
             </>
           ) : (
             <>
-              <Sparkles className="w-10 h-10 text-surface-600 mx-auto mb-3" />
+              <Sparkles className="w-10 h-10 text-surface-500 mx-auto mb-3" />
               <p className="text-surface-400 text-sm mb-1">Roadmap not ready yet</p>
               {genError && <p className="text-red-400 text-xs mb-3">{genError}</p>}
               <Button onClick={() => generate()} disabled={generating}>
-                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Generate Roadmap
               </Button>
             </>
@@ -159,23 +206,30 @@ export function RoadmapOverview() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-accent-400" />
-          <h3 className="text-lg font-semibold text-white">Your Roadmap</h3>
+          <h3 className="text-lg font-semibold text-surface-200">Your Roadmap</h3>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={fetchRoadmap} disabled={loading}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           </Button>
           <Button size="sm" onClick={() => generate(true)} disabled={generating}>
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             <span className="hidden sm:inline ml-1.5">Regenerate</span>
           </Button>
         </div>
       </div>
 
+      {error && (
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {isFinished ? (
         <div className="text-center py-8">
           <Trophy className="w-12 h-12 text-amber-400 mx-auto mb-3" />
-          <h4 className="text-lg font-semibold text-white mb-1">Roadmap Complete!</h4>
+          <h4 className="text-lg font-semibold text-surface-200 mb-1">Roadmap Complete!</h4>
           <p className="text-sm text-surface-400 mb-4">You've completed all weeks. Great work!</p>
           <Button onClick={() => generate(true)} disabled={generating}>
             <Sparkles className="w-4 h-4" />
@@ -246,7 +300,7 @@ export function RoadmapOverview() {
                       </div>
                     )}
                   </div>
-                  <div className="text-xs text-surface-500 shrink-0">{week.problemsCount} problems</div>
+                  <div className="text-xs text-surface-500 shrink-0">{week.problemsCount}</div>
                   {isCurrent && <ChevronRight className="w-4 h-4 text-accent-400 shrink-0" />}
                 </div>
               </motion.div>
@@ -264,7 +318,7 @@ export function RoadmapOverview() {
                 </div>
                 <Button size="sm" onClick={advanceWeek} disabled={advancing}>
                   {advancing ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <><ArrowRight className="w-4 h-4" /> Week {roadmap.currentWeek + 1}</>
                   )}

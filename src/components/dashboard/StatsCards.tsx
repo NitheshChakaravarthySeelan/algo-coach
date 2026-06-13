@@ -36,7 +36,7 @@ function RingProgress({ value, max, color, label }: { value: number; max: number
           transition={{ duration: 1, ease: 'easeOut' }}
         />
       </svg>
-      <span className="text-2xl font-bold text-white">{value}</span>
+      <span className="text-2xl font-bold text-surface-50">{value}</span>
       <span className="text-xs text-surface-400">{label}</span>
     </div>
   )
@@ -65,7 +65,7 @@ export function StatsCards({ stats }: { stats: StatsData }) {
               <item.icon className={`w-5 h-5 ${item.color}`} />
             </div>
           </div>
-          <div className="text-3xl font-bold text-white mb-1">{item.value}</div>
+          <div className="text-3xl font-bold text-surface-50 mb-1">{item.value}</div>
           <div className="text-sm text-surface-400">{item.label}</div>
         </motion.div>
       ))}
