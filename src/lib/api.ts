@@ -72,7 +72,9 @@ export const api = {
   },
   plan: {
     roadmap: () =>
-      request<{ success: boolean; data: { id: string; weeks: any; currentWeek: number } }>('/plan/roadmap'),
+      request<{ success: boolean; data: { id: string; weeks: any; currentWeek: number; ready: boolean } }>('/plan/roadmap'),
+    roadmapGenerate: () =>
+      request<{ success: boolean; data: { id: string; weeks: any; currentWeek: number; ready: boolean } }>('/plan/roadmap/generate', { method: 'POST' }),
     today: {
       get: () =>
       request<{ success: boolean; exists: boolean; data: any }>('/plan/today'),

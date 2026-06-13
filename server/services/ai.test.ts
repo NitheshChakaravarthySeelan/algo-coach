@@ -1,8 +1,8 @@
 import { describe, test, expect } from "bun:test"
-import { extractJson } from "./ai"
+import { extractJson } from "./ai-provider"
 
 describe("extractJson", () => {
-  test("extracts JSON object from chain-of-thought text", () => {
+  test("extracts JSON object stripping trailing text", () => {
     const input = `Thought: I need to create a plan.
     {
       "weeks": [
@@ -10,16 +10,23 @@ describe("extractJson", () => {
       ]
     }
     Some trailing text`
-    expect(extractJson(input)).toBe(input.slice(input.indexOf("{")))
+    const extracted = extractJson(input)
+    expect(() => JSON.parse(extracted)).not.toThrow()
+    const parsed = JSON.parse(extracted)
+    expect(parsed.weeks).toBeDefined()
+    expect(parsed.weeks[0].week).toBe(1)
   })
 
-  test("extracts JSON array from text", () => {
+  test("extracts JSON array stripping trailing text", () => {
     const input = `Here is the roadmap:
     [
       { "week": 1, "topic": "Arrays", "description": "Learn arrays", "problemsCount": 5 }
     ]
     End.`
-    expect(extractJson(input)).toBe(input.slice(input.indexOf("[")))
+    const extracted = extractJson(input)
+    expect(() => JSON.parse(extracted)).not.toThrow()
+    const parsed = JSON.parse(extracted)
+    expect(parsed[0].week).toBe(1)
   })
 
   test("returns original text if no JSON found", () => {
@@ -36,20 +43,27 @@ describe("extractJson", () => {
     expect(extractJson("")).toBe("")
   })
 
-  test("extracts from nested JSON", () => {
-    const input = `Background: user is beginner.
+  test("extracts from nested JSON with trailing backticks", () => {
+    const input = `\`\`\`json
     {
       "problems": [
         { "title": "Two Sum", "titleSlug": "two-sum", "difficulty": "Easy", "topicTags": ["Array"], "leetcodeUrl": "https://leetcode.com/problems/two-sum/", "acRate": 57.6 }
       ],
       "explanation": "Start with Two Sum"
-    }`
+    }
+    \`\`\``
     const extracted = extractJson(input)
-    expect(extracted.startsWith("{")).toBe(true)
     expect(() => JSON.parse(extracted)).not.toThrow()
     const parsed = JSON.parse(extracted)
     expect(parsed.problems).toBeDefined()
-    expect(parsed.explanation).toBeDefined()
+    expect(parsed.explanation).toBe("Start with Two Sum")
+  })
+
+  test("extracts JSON from markdown code blocks", () => {
+    const input = "```json\n[{\"week\":1,\"topic\":\"Arrays\"}]\n```"
+    const extracted = extractJson(input)
+    expect(() => JSON.parse(extracted)).not.toThrow()
+    expect(JSON.parse(extracted)[0].topic).toBe("Arrays")
   })
 
   test("prefers object over array when both present", () => {

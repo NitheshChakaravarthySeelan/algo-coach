@@ -56,28 +56,16 @@ app.post('/', async (c) => {
       where: eq(roadmapPlan.userId, userId),
     })
 
-    let roadmap
     if (!existingPlan) {
-      roadmap = await generateRoadmap({
-        experienceLevel: parsed.experienceLevel,
-        goals: parsed.goals,
-        weakTopics: parsed.weakTopics,
-        targetCompanies: parsed.targetCompanies,
-        hoursPerWeek: parsed.hoursPerWeek,
-        targetDate: parsed.targetDate,
-      })
-
       await db.insert(roadmapPlan).values({
         id: crypto.randomUUID(),
         userId,
-        weeks: JSON.parse(JSON.stringify(roadmap)),
+        weeks: [],
         currentWeek: 1,
       })
-    } else {
-      roadmap = existingPlan.weeks
     }
 
-    return c.json({ success: true, data: { roadmap } }, 201)
+    return c.json({ success: true, data: { roadmap: existingPlan?.weeks || null } }, 201)
   } catch (err: any) {
     if (err instanceof z.ZodError) return c.json({ success: false, errors: err.issues }, 400)
     return c.json({ success: false, error: err.message || 'Failed to save preferences' }, 500)

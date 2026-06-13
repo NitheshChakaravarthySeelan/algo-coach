@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import { db } from '../db'
-import { roadmapPlan, dailyPlan, dailyProgress } from '../db/schema'
+import { userPreferences, roadmapPlan, dailyPlan, dailyProgress } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
 import { eq, and, gte, desc } from 'drizzle-orm'
-import { generateDailyTask } from '../services/ai'
+import { generateRoadmap, generateDailyTask } from '../services/ai'
 
 const app = new Hono<{ Variables: { userId: string } }>()
 app.use('/*', authMiddleware)
@@ -15,9 +15,63 @@ app.get('/roadmap', async (c) => {
       where: eq(roadmapPlan.userId, userId),
     })
     if (!plan) return c.json({ success: false, error: 'No roadmap found' }, 404)
-    return c.json({ success: true, data: plan })
+
+    const weeks = Array.isArray(plan.weeks) ? plan.weeks : []
+    return c.json({ success: true, data: { ...plan, ready: weeks.length > 0 } })
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
+app.post('/roadmap/generate', async (c) => {
+  try {
+    const userId = c.get('userId')
+
+    const planRecord = await db.query.roadmapPlan.findFirst({
+      where: eq(roadmapPlan.userId, userId),
+    })
+    if (!planRecord) {
+      return c.json({ success: false, error: 'Complete onboarding first' }, 400)
+    }
+
+    const existingWeeks = Array.isArray(planRecord.weeks) ? planRecord.weeks : []
+    if (existingWeeks.length > 0) {
+      return c.json({ success: true, data: { ...planRecord, ready: true } })
+    }
+
+    const prefs = await db.query.userPreferences.findFirst({
+      where: eq(userPreferences.userId, userId),
+    })
+    if (!prefs) {
+      return c.json({ success: false, error: 'Complete onboarding first' }, 400)
+    }
+
+    const roadmap = await generateRoadmap({
+      experienceLevel: prefs.experienceLevel,
+      goals: prefs.goals,
+      weakTopics: prefs.weakTopics,
+      targetCompanies: prefs.targetCompanies || [],
+      hoursPerWeek: prefs.hoursPerWeek,
+      targetDate: prefs.targetDate?.toISOString(),
+    })
+
+    await db.update(roadmapPlan).set({
+      weeks: JSON.parse(JSON.stringify(roadmap)),
+      currentWeek: 1,
+      updatedAt: new Date(),
+    }).where(eq(roadmapPlan.userId, userId))
+
+    const updated = await db.query.roadmapPlan.findFirst({
+      where: eq(roadmapPlan.userId, userId),
+    })
+
+    return c.json({ success: true, data: { ...updated, ready: true } }, 201)
+  } catch (err: any) {
+    const msg = err.message || ''
+    if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
+      return c.json({ success: false, error: 'AI quota reached. Please try again in a minute.', retryAfter: 60 }, 429)
+    }
+    return c.json({ success: false, error: 'Failed to generate roadmap' }, 500)
   }
 })
 
@@ -53,6 +107,7 @@ app.post('/today', async (c) => {
     if (!planRecord) return c.json({ success: false, error: 'No roadmap found. Complete onboarding first.' }, 400)
 
     const roadmap = Array.isArray(planRecord.weeks) ? planRecord.weeks : []
+    if (roadmap.length === 0) return c.json({ success: false, error: 'Roadmap is still being generated. Please try again shortly.' }, 400)
     const currentWeek = planRecord.currentWeek
 
     const allPlans = await db.query.dailyPlan.findMany({
