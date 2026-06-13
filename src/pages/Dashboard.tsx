@@ -42,7 +42,7 @@ export function Dashboard() {
         api.leetcode.listProblems().catch(() => ({ success: false, data: [] as any[] })),
         api.plan.streak().catch(() => null),
         api.plan.history().catch(() => ({ success: false, data: [] as any[] })),
-        api.plan.today.get().catch(() => ({ exists: false })),
+        api.plan.today.get().catch(() => ({ success: false, exists: false, data: null })),
       ])
       setStats(statsRes?.data ?? null)
       setProblems(problemsRes?.data ?? [])

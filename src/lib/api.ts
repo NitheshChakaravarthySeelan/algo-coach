@@ -88,7 +88,7 @@ export const api = {
     roadmapAdvance: () =>
       request<{ success: boolean; data: any }>('/plan/roadmap/advance', { method: 'PATCH' }),
     today: {
-      get: () => request<{ success: boolean; exists: boolean; data?: any }>('/plan/today'),
+      get: () => request<{ success: boolean; exists: boolean; data: any | null }>('/plan/today'),
       generate: (difficulty?: 'EASY' | 'MEDIUM' | 'HARD' | 'MIXED') =>
         request<{ success: boolean; data: any }>('/plan/today', {
           method: 'POST',
