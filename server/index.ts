@@ -34,4 +34,9 @@ app.route('/api/plan', planRoutes)
 
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
+const port = parseInt(process.env.PORT || '3000')
+if (typeof Bun !== 'undefined') {
+  Bun.serve({ fetch: app.fetch, port, idleTimeout: 255 })
+}
+
 export default app

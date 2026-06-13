@@ -1,4 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { GoogleGenAI } from "@google/genai"
+
+const AI_TIMEOUT = 180_000
 
 export interface GenerateOptions {
   prompt: string
@@ -8,30 +10,39 @@ export interface GenerateOptions {
 
 export interface AIProvider {
   generate(options: GenerateOptions): Promise<string>
+  generateStream(options: GenerateOptions): AsyncGenerator<string>
   readonly model: string
 }
 
 export class GoogleAIProvider implements AIProvider {
-  private client: GoogleGenerativeAI
+  private client: GoogleGenAI
   readonly model: string
 
   constructor(model?: string) {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) throw new Error("GEMINI_API_KEY not set")
-    this.client = new GoogleGenerativeAI(apiKey)
-    this.model = model || process.env.AI_MODEL || "gemma-4-31b-it"
+    const key = process.env.GEMINI_API_KEY
+    if (!key) throw new Error("GEMINI_API_KEY not set")
+    this.client = new GoogleGenAI({ apiKey: key, httpOptions: { timeout: AI_TIMEOUT } })
+    this.model = model || process.env.AI_MODEL || "gemma-4-26b-a4b-it"
   }
 
   async generate(options: GenerateOptions): Promise<string> {
-    const genModel = this.client.getGenerativeModel({
+    let text = ""
+    for await (const chunk of this.generateStream(options)) {
+      text += chunk
+    }
+    return text
+  }
+
+  async *generateStream(options: GenerateOptions): AsyncGenerator<string> {
+    const stream = await this.client.models.generateContentStream({
       model: this.model,
-      generationConfig: {
-        temperature: options.temperature ?? 0.7,
-        ...(options.jsonMode ? { responseMimeType: "application/json" } : {}),
-      },
+      contents: options.prompt,
+      config: { temperature: options.temperature ?? 0.7 },
     })
-    const result = await genModel.generateContent(options.prompt)
-    return result.response.text()
+    for await (const chunk of stream) {
+      const t = chunk.text
+      if (t) yield t
+    }
   }
 }
 
@@ -53,7 +64,7 @@ export class GroqAIProvider implements AIProvider {
     const key = process.env.GROQ_API_KEY
     if (!key) throw new Error("GROQ_API_KEY not set")
     this.apiKey = key
-    this.model = model || process.env.AI_MODEL || "gemma2-9b-it"
+    this.model = model || process.env.AI_MODEL || "llama-3.3-70b-versatile"
   }
 
   private async client() {
@@ -64,14 +75,26 @@ export class GroqAIProvider implements AIProvider {
   }
 
   async generate(options: GenerateOptions): Promise<string> {
+    let text = ""
+    for await (const chunk of this.generateStream(options)) {
+      text += chunk
+    }
+    return text
+  }
+
+  async *generateStream(options: GenerateOptions): AsyncGenerator<string> {
     const client = await this.client()
-    const completion = await client.chat.completions.create({
+    const stream = await client.chat.completions.create({
       model: this.model,
       messages: [{ role: "user", content: options.prompt }],
       temperature: options.temperature ?? 0.7,
+      stream: true,
       ...(options.jsonMode ? { response_format: { type: "json_object" } } : {}),
     })
-    return completion.choices[0]?.message?.content || ""
+    for await (const chunk of stream) {
+      const content = chunk.choices?.[0]?.delta?.content
+      if (content) yield content
+    }
   }
 }
 
@@ -88,13 +111,19 @@ export function createProvider(model?: string): AIProvider {
 }
 
 export function extractJson(text: string): string {
-  const firstBrace = text.indexOf("{")
-  const firstBracket = text.indexOf("[")
-  const start = firstBrace === -1 ? firstBracket : firstBracket === -1 ? firstBrace : Math.min(firstBrace, firstBracket)
-  if (start === -1) return text
-  const trimmed = text.slice(start).trim()
-  const lastBrace = trimmed.lastIndexOf("}")
-  const lastBracket = trimmed.lastIndexOf("]")
-  const end = lastBrace === -1 ? lastBracket : lastBracket === -1 ? lastBrace : Math.max(lastBrace, lastBracket)
-  return end === -1 ? trimmed : trimmed.slice(0, end + 1)
+  const lastBrace = text.lastIndexOf("}")
+  const lastBracket = text.lastIndexOf("]")
+  const end = Math.max(lastBrace, lastBracket)
+  if (end === -1) return text
+
+  for (let i = end - 1; i >= 0; i--) {
+    if (text[i] === "{" || text[i] === "[") {
+      const candidate = text.slice(i, end + 1)
+      try {
+        JSON.parse(candidate)
+        return candidate
+      } catch {}
+    }
+  }
+  return text
 }

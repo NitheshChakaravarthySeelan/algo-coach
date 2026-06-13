@@ -2,8 +2,10 @@ import { Hono } from 'hono'
 import { db } from '../db'
 import { userPreferences, roadmapPlan, dailyPlan, dailyProgress } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
-import { eq, and, gte, desc } from 'drizzle-orm'
-import { generateRoadmap, generateDailyTask } from '../services/ai'
+import { eq, and, gte, desc, lte, inArray } from 'drizzle-orm'
+import { selectDailyProblems } from '../services/ai'
+import { createProvider, extractJson } from '../services/ai-provider'
+import { searchLeetCodeProblems } from '../services/leetcode-search'
 
 const app = new Hono<{ Variables: { userId: string } }>()
 app.use('/*', authMiddleware)
@@ -15,7 +17,6 @@ app.get('/roadmap', async (c) => {
       where: eq(roadmapPlan.userId, userId),
     })
     if (!plan) return c.json({ success: false, error: 'No roadmap found' }, 404)
-
     const weeks = Array.isArray(plan.weeks) ? plan.weeks : []
     return c.json({ success: true, data: { ...plan, ready: weeks.length > 0 } })
   } catch (err: any) {
@@ -23,55 +24,180 @@ app.get('/roadmap', async (c) => {
   }
 })
 
-app.post('/roadmap/generate', async (c) => {
+app.patch('/roadmap/advance', async (c) => {
   try {
     const userId = c.get('userId')
-
-    const planRecord = await db.query.roadmapPlan.findFirst({
+    const plan = await db.query.roadmapPlan.findFirst({
       where: eq(roadmapPlan.userId, userId),
     })
-    if (!planRecord) {
-      return c.json({ success: false, error: 'Complete onboarding first' }, 400)
+    if (!plan) return c.json({ success: false, error: 'No roadmap found' }, 404)
+
+    const weeks = Array.isArray(plan.weeks) ? plan.weeks : []
+    if (!weeks.length) return c.json({ success: false, error: 'Roadmap not ready' }, 400)
+
+    if (plan.currentWeek >= weeks.length) {
+      return c.json({ success: false, error: 'Roadmap already completed' }, 400)
     }
 
-    const existingWeeks = Array.isArray(planRecord.weeks) ? planRecord.weeks : []
-    if (existingWeeks.length > 0) {
-      return c.json({ success: true, data: { ...planRecord, ready: true } })
-    }
-
-    const prefs = await db.query.userPreferences.findFirst({
-      where: eq(userPreferences.userId, userId),
-    })
-    if (!prefs) {
-      return c.json({ success: false, error: 'Complete onboarding first' }, 400)
-    }
-
-    const roadmap = await generateRoadmap({
-      experienceLevel: prefs.experienceLevel,
-      goals: prefs.goals,
-      weakTopics: prefs.weakTopics,
-      targetCompanies: prefs.targetCompanies || [],
-      hoursPerWeek: prefs.hoursPerWeek,
-      targetDate: prefs.targetDate?.toISOString(),
-    })
-
+    const nextWeek = plan.currentWeek + 1
     await db.update(roadmapPlan).set({
-      weeks: JSON.parse(JSON.stringify(roadmap)),
-      currentWeek: 1,
+      currentWeek: nextWeek,
       updatedAt: new Date(),
     }).where(eq(roadmapPlan.userId, userId))
 
     const updated = await db.query.roadmapPlan.findFirst({
       where: eq(roadmapPlan.userId, userId),
     })
-
-    return c.json({ success: true, data: { ...updated, ready: true } }, 201)
+    return c.json({ success: true, data: { ...updated, ready: true } })
   } catch (err: any) {
-    const msg = err.message || ''
-    if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
-      return c.json({ success: false, error: 'AI quota reached. Please try again in a minute.', retryAfter: 60 }, 429)
-    }
-    return c.json({ success: false, error: 'Failed to generate roadmap' }, 500)
+    return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
+app.post('/roadmap/generate', async (c) => {
+  const userId = c.get('userId')
+
+  const planRecord = await db.query.roadmapPlan.findFirst({
+    where: eq(roadmapPlan.userId, userId),
+  })
+  if (!planRecord) {
+    return c.json({ success: false, error: 'Complete onboarding first' }, 400)
+  }
+
+  const force = c.req.query('force') === 'true'
+  const existingWeeks = Array.isArray(planRecord.weeks) ? planRecord.weeks : []
+  if (existingWeeks.length > 0 && !force) {
+    return c.json({ success: true, data: { ...planRecord, ready: true } })
+  }
+
+  const prefs = await db.query.userPreferences.findFirst({
+    where: eq(userPreferences.userId, userId),
+  })
+  if (!prefs) {
+    return c.json({ success: false, error: 'Complete onboarding first' }, 400)
+  }
+
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (data: unknown) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+      }
+
+      try {
+        const prompt = `You are a LeetCode coach creating a personalized study roadmap.
+
+User Profile:
+- Experience: ${prefs.experienceLevel}
+- Goals: ${prefs.goals.join(", ")}
+- Weak topics: ${prefs.weakTopics.join(", ")}
+- Target companies: ${prefs.targetCompanies?.join(", ") || "Not specified"}
+- Hours per week: ${prefs.hoursPerWeek}
+- Target date: ${prefs.targetDate || "No deadline"}
+
+Create a structured weekly roadmap that:
+1. Starts with fundamentals and progresses to advanced topics
+2. Prioritizes the user's weak topics
+3. Allocates more weeks to harder topics
+4. Is realistic given their hours per week
+
+Return a JSON array where each entry has: week (number), topic (string), description (string), problemsCount (number).
+
+IMPORTANT: Each topic MUST be a valid LeetCode problem tag name (e.g., "Arrays", "Strings", "Hash Table", "Dynamic Programming", "Linked List", "Binary Search", "Trees", "Graph", "Heap", "Backtracking", "Sliding Window", "Two Pointers", "Stack", "Queue", "Math", "Sorting", "Greedy", "Recursion", "Bit Manipulation"). Use STANDARD LeetCode tag names only, separated by commas if combining topics. EXAMPLE: "Binary Search, Bit Manipulation" not "Binary Search & Bit Manipulation".
+
+Aim for 4-12 weeks total depending on the user's experience and goals.`
+
+        const provider = createProvider()
+        let fullText = ""
+
+        for await (const chunk of provider.generateStream({ prompt, temperature: 0.7 })) {
+          fullText += chunk
+          send({ type: "token", text: chunk })
+        }
+
+        const cleaned = extractJson(fullText)
+        let parsed: any
+        try {
+          parsed = JSON.parse(cleaned)
+        } catch {
+          send({ type: "error", message: "Failed to parse roadmap from AI response" })
+          return
+        }
+
+        const weeks = Array.isArray(parsed) ? parsed : parsed.weeks || parsed.roadmap || []
+
+        await db.update(roadmapPlan).set({
+          weeks: JSON.parse(JSON.stringify(weeks)),
+          currentWeek: 1,
+          updatedAt: new Date(),
+        }).where(eq(roadmapPlan.userId, userId))
+
+        const updated = await db.query.roadmapPlan.findFirst({
+          where: eq(roadmapPlan.userId, userId),
+        })
+
+        send({ type: "done", data: { ...updated, ready: true } })
+      } catch (err: any) {
+        const msg = err.message || ""
+        if (msg.includes("429") || msg.includes("quota") || msg.includes("Too Many Requests")) {
+          send({ type: "error", message: "AI quota reached. Please try again in a minute.", retryAfter: 60 })
+        } else {
+          send({ type: "error", message: `Failed to generate roadmap: ${msg}` })
+        }
+      } finally {
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  })
+})
+
+app.get('/roadmap/progress', async (c) => {
+  try {
+    const userId = c.get('userId')
+
+    const plan = await db.query.roadmapPlan.findFirst({
+      where: eq(roadmapPlan.userId, userId),
+    })
+    if (!plan) return c.json({ success: false, error: 'No roadmap found' }, 404)
+
+    const weeks = Array.isArray(plan.weeks) ? plan.weeks : []
+    if (!weeks.length) return c.json({ success: false, error: 'Roadmap not ready' }, 400)
+
+    const allPlans = await db.query.dailyPlan.findMany({
+      where: eq(dailyPlan.userId, userId),
+    })
+
+    const progress = weeks.map((w: any) => {
+      const weekPlans = allPlans.filter((p: any) => p.weekNumber === w.week)
+      const solved = weekPlans.reduce((count: number, plan: any) => {
+        const problems = Array.isArray(plan.problems) ? plan.problems : []
+        return count + problems.filter((p: any) => (p as Record<string, unknown>).status === "SOLVED").length
+      }, 0)
+      const total = weekPlans.reduce((count: number, plan: any) => {
+        const problems = Array.isArray(plan.problems) ? plan.problems : []
+        return count + problems.length
+      }, 0)
+      return {
+        week: w.week,
+        topic: w.topic,
+        targetCount: w.problemsCount,
+        assignedCount: total,
+        solvedCount: solved,
+        percent: total > 0 ? Math.round((solved / total) * 100) : 0,
+      }
+    })
+
+    return c.json({ success: true, data: progress })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
   }
 })
 
@@ -100,6 +226,22 @@ app.get('/today', async (c) => {
 app.post('/today', async (c) => {
   try {
     const userId = c.get('userId')
+    const body: any = await c.req.json().catch(() => ({}))
+    const difficultyFilter = (body.difficulty || "MIXED") as "EASY" | "MEDIUM" | "HARD" | "MIXED"
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const existing = await db.query.dailyPlan.findFirst({
+      where: and(
+        eq(dailyPlan.userId, userId),
+        gte(dailyPlan.date, today),
+        gte(tomorrow, dailyPlan.date),
+      ),
+    })
+    if (existing) return c.json({ success: true, data: existing, exists: true }, 200)
 
     const planRecord = await db.query.roadmapPlan.findFirst({
       where: eq(roadmapPlan.userId, userId),
@@ -130,13 +272,20 @@ app.post('/today', async (c) => {
       .filter((p) => p.status === 'SOLVED')
       .map((p) => p.problemId)
 
-    const task = await generateDailyTask({
+    const task = await selectDailyProblems({
       roadmap,
       currentWeek,
       progress: progress.map((p) => ({ problemId: p.problemId, status: p.status })),
       dedupCount,
       solvedSlugs,
+      difficultyFilter,
     })
+
+    const problems = task.problems.map((p) => ({
+      ...p,
+      status: "PENDING",
+      completedAt: null,
+    }))
 
     const entry = {
       id: crypto.randomUUID(),
@@ -144,19 +293,262 @@ app.post('/today', async (c) => {
       date: new Date(),
       weekNumber: currentWeek,
       topic: (roadmap[currentWeek - 1] as Record<string, unknown>)?.topic as string || '',
-      problems: JSON.parse(JSON.stringify(task.problems)),
+      problems: JSON.parse(JSON.stringify(problems)),
     }
 
     await db.insert(dailyPlan).values(entry)
-    await db.update(roadmapPlan).set({ updatedAt: new Date() }).where(eq(roadmapPlan.userId, userId))
 
     return c.json({ success: true, data: { ...entry, explanation: task.explanation } }, 201)
   } catch (err: any) {
-    const msg = err.message || ''
-    if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
-      return c.json({ success: false, error: 'AI quota reached. Please try again in a minute.', retryAfter: 60 }, 429)
+    return c.json({ success: false, error: `Failed to generate daily plan: ${err.message}` }, 500)
+  }
+})
+
+app.patch('/today/:planId/problem/:slug', async (c) => {
+  try {
+    const userId = c.get('userId')
+    const { planId, slug } = c.req.param()
+    const body: any = await c.req.json()
+    const status = body.status as string
+    if (!["SOLVED", "TRIED", "SKIPPED", "PENDING"].includes(status)) {
+      return c.json({ success: false, error: 'Invalid status. Use SOLVED, TRIED, SKIPPED, or PENDING.' }, 400)
     }
-    return c.json({ success: false, error: 'Failed to generate daily plan' }, 500)
+
+    const plan = await db.query.dailyPlan.findFirst({
+      where: and(eq(dailyPlan.id, planId), eq(dailyPlan.userId, userId)),
+    })
+    if (!plan) return c.json({ success: false, error: 'Plan not found' }, 404)
+
+    const problems = Array.isArray(plan.problems) ? [...plan.problems] : []
+    const idx = problems.findIndex((p: any) => (p as Record<string, unknown>).titleSlug === slug)
+    if (idx === -1) return c.json({ success: false, error: 'Problem not found in this plan' }, 404)
+
+    const problem = { ...(problems[idx] as Record<string, unknown>) }
+    problem.status = status
+    problem.completedAt = status === "SOLVED" ? new Date().toISOString() : null
+    problems[idx] = problem
+
+    await db.update(dailyPlan)
+      .set({ problems: JSON.parse(JSON.stringify(problems)) })
+      .where(eq(dailyPlan.id, planId))
+
+    const existingProgress = await db.query.dailyProgress.findFirst({
+      where: and(
+        eq(dailyProgress.userId, userId),
+        eq(dailyProgress.problemId, slug),
+      ),
+    })
+
+    if (existingProgress) {
+      await db.update(dailyProgress)
+        .set({ status, date: new Date() })
+        .where(eq(dailyProgress.id, existingProgress.id))
+    } else {
+      await db.insert(dailyProgress).values({
+        id: crypto.randomUUID(),
+        userId,
+        date: new Date(),
+        problemName: problem.title as string,
+        difficulty: problem.difficulty as string,
+        problemId: slug,
+        topics: (problem.topicTags as string[]) || [],
+        status,
+      })
+    }
+
+    return c.json({ success: true, data: { ...problem, status, completedAt: problem.completedAt } })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
+app.post('/today/:planId/regenerate', async (c) => {
+  try {
+    const userId = c.get('userId')
+    const { planId } = c.req.param()
+    const body: any = await c.req.json().catch(() => ({}))
+    const slot = body.slot as number | undefined
+    const easier = body.easier === true
+
+    const plan = await db.query.dailyPlan.findFirst({
+      where: and(eq(dailyPlan.id, planId), eq(dailyPlan.userId, userId)),
+    })
+    if (!plan) return c.json({ success: false, error: 'Plan not found' }, 404)
+
+    const existingProblems = Array.isArray(plan.problems) ? [...plan.problems] : []
+
+    if (slot !== undefined) {
+      if (slot < 0 || slot >= existingProblems.length) {
+        return c.json({ success: false, error: `Invalid slot. Must be 0-${existingProblems.length - 1}` }, 400)
+      }
+    }
+
+    const planRecord = await db.query.roadmapPlan.findFirst({
+      where: eq(roadmapPlan.userId, userId),
+    })
+    const roadmap = Array.isArray(planRecord?.weeks) ? planRecord.weeks : []
+
+    const allPlans = await db.query.dailyPlan.findMany({
+      where: eq(dailyPlan.userId, userId),
+    })
+    const dedupCount: Record<string, number> = {}
+    for (const p of allPlans) {
+      const probs = Array.isArray(p.problems) ? p.problems : []
+      for (const prob of probs) {
+        const slug = (prob as Record<string, unknown>).titleSlug as string
+        if (slug) dedupCount[slug] = (dedupCount[slug] || 0) + 1
+      }
+    }
+    const progress = await db.query.dailyProgress.findMany({
+      where: eq(dailyProgress.userId, userId),
+    })
+    const solvedSlugs = progress.filter((p) => p.status === 'SOLVED').map((p) => p.problemId)
+
+    const currentPlanSlugs = existingProblems.map((p: any) => (p as Record<string, unknown>).titleSlug as string)
+
+    if (slot !== undefined) {
+      const replaced = existingProblems[slot] as Record<string, unknown>
+      let diffFilter: "EASY" | "MEDIUM" | "HARD" | "MIXED" = "MIXED"
+      if (easier) {
+        const curDiff = (replaced.difficulty as string) || "MEDIUM"
+        diffFilter = curDiff === "HARD" ? "MEDIUM" : curDiff === "MEDIUM" ? "EASY" : "EASY"
+      }
+      const result = await selectDailyProblems({
+        roadmap,
+        currentWeek: plan.weekNumber,
+        progress: progress.map((p) => ({ problemId: p.problemId, status: p.status })),
+        dedupCount,
+        solvedSlugs,
+        count: 1,
+        difficultyFilter: diffFilter,
+        excludeSlugs: currentPlanSlugs,
+      })
+      const newProblem = result.problems[0]
+      if (!newProblem) {
+        return c.json({ success: false, error: 'No alternative problem found to replace this slot.' }, 400)
+      }
+      existingProblems[slot] = { ...newProblem, status: "PENDING", completedAt: null }
+    } else {
+      const result = await selectDailyProblems({
+        roadmap,
+        currentWeek: plan.weekNumber,
+        progress: progress.map((p) => ({ problemId: p.problemId, status: p.status })),
+        dedupCount,
+        solvedSlugs,
+        count: existingProblems.length,
+        difficultyFilter: "MIXED",
+        excludeSlugs: [],
+      })
+      const newProblems = result.problems.map((p) => ({ ...p, status: "PENDING", completedAt: null }))
+      existingProblems.length = 0
+      existingProblems.push(...newProblems)
+    }
+
+    await db.update(dailyPlan)
+      .set({ problems: JSON.parse(JSON.stringify(existingProblems)) })
+      .where(eq(dailyPlan.id, planId))
+
+    return c.json({ success: true, data: { ...plan, problems: existingProblems } })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
+app.get('/streak', async (c) => {
+  try {
+    const userId = c.get('userId')
+
+    const plans = await db.query.dailyPlan.findMany({
+      where: eq(dailyPlan.userId, userId),
+      orderBy: [desc(dailyPlan.date)],
+    })
+
+    if (!plans.length) {
+      return c.json({ success: true, data: { currentStreak: 0, longestStreak: 0, solvedToday: false } })
+    }
+
+    const solvedDates = new Set<string>()
+    const allDates = new Set<string>()
+
+    for (const plan of plans) {
+      const d = new Date(plan.date)
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      allDates.add(dateStr)
+      const problems = Array.isArray(plan.problems) ? plan.problems : []
+      const hasSolved = problems.some((p: any) => (p as Record<string, unknown>).status === "SOLVED")
+      if (hasSolved) solvedDates.add(dateStr)
+    }
+
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
+    const solvedToday = solvedDates.has(todayStr)
+
+    let currentStreak = 0
+    const d = new Date()
+    if (!solvedToday) d.setDate(d.getDate() - 1)
+
+    while (true) {
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      if (solvedDates.has(ds)) {
+        currentStreak++
+        d.setDate(d.getDate() - 1)
+      } else {
+        break
+      }
+    }
+
+    let longestStreak = currentStreak
+    let tempStreak = 0
+    const sortedDates = [...solvedDates].sort()
+    for (let i = 0; i < sortedDates.length; i++) {
+      if (i === 0) {
+        tempStreak = 1
+      } else {
+        const prev = new Date(sortedDates[i - 1])
+        const curr = new Date(sortedDates[i])
+        const diffMs = curr.getTime() - prev.getTime()
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
+        if (diffDays === 1) {
+          tempStreak++
+        } else {
+          tempStreak = 1
+        }
+      }
+      longestStreak = Math.max(longestStreak, tempStreak)
+    }
+
+    return c.json({
+      success: true,
+      data: { currentStreak, longestStreak, solvedToday },
+    })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
+app.get('/history', async (c) => {
+  try {
+    const userId = c.get('userId')
+    const plans = await db.query.dailyPlan.findMany({
+      where: eq(dailyPlan.userId, userId),
+      orderBy: [desc(dailyPlan.date)],
+    })
+
+    const history = plans.flatMap((p) => {
+      const problems = Array.isArray(p.problems) ? p.problems : []
+      return problems
+        .filter((prob: any) => (prob as Record<string, unknown>).status === "SOLVED")
+        .map((prob: any) => ({
+          ...(prob as Record<string, unknown>),
+          solvedDate: p.date,
+          weekNumber: p.weekNumber,
+          planId: p.id,
+        }))
+    })
+
+    return c.json({ success: true, data: history })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
   }
 })
 

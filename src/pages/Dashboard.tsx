@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, GitBranch, Sun, Moon } from 'lucide-react'
+import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, GitBranch, Sun, Moon, Flame, History, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
+import { useSession } from '@/lib/use-session'
 import { api } from '@/lib/api'
 import { useTheme } from '@/lib/theme'
 import { Button } from '@/components/ui/Button'
@@ -14,7 +15,7 @@ import { RoadmapOverview } from '@/components/dashboard/RoadmapOverview'
 
 export function Dashboard() {
   const navigate = useNavigate()
-  const { data: session, isPending: authLoading } = authClient.useSession()
+  const { data: session, isPending: authLoading } = useSession()
   const { theme, toggleTheme } = useTheme()
 
   const [checkingOnboard, setCheckingOnboard] = useState(true)
@@ -25,17 +26,24 @@ export function Dashboard() {
   const [showLogModal, setShowLogModal] = useState(false)
   const [linking, setLinking] = useState(false)
   const [lcUsername, setLcUsername] = useState('')
+  const [streak, setStreak] = useState<{ currentStreak: number; longestStreak: number; solvedToday: boolean } | null>(null)
+  const [history, setHistory] = useState<any[]>([])
+  const [showHistory, setShowHistory] = useState(false)
 
   async function loadData() {
     setLoading(true)
     setError('')
     try {
-      const [statsRes, problemsRes] = await Promise.all([
+      const [statsRes, problemsRes, streakRes, historyRes] = await Promise.all([
         api.leetcode.stats().catch(() => null),
         api.leetcode.listProblems().catch(() => ({ success: false, data: [] as any[] })),
+        api.plan.streak().catch(() => null),
+        api.plan.history().catch(() => ({ success: false, data: [] as any[] })),
       ])
       setStats(statsRes?.data ?? null)
       setProblems(problemsRes?.data ?? [])
+      setStreak(streakRes?.data ?? null)
+      setHistory(historyRes?.data ?? [])
     } catch {
       setError('Failed to load data')
     } finally {
@@ -50,7 +58,7 @@ export function Dashboard() {
   useEffect(() => {
     if (!session) return
     api.onboard.status()
-      .then((res) => {
+      .then((res: any) => {
         if (!res.onboarded) { navigate('/onboard', { replace: true }); return }
         setCheckingOnboard(false)
         loadData()
@@ -65,7 +73,7 @@ export function Dashboard() {
     if (!lcUsername.trim()) return
     setLinking(true)
     try {
-      await api.leetcode.link({ leetcodeUsername: lcUsername.trim() })
+      await api.leetcode.link({ username: lcUsername.trim() })
       setLcUsername('')
       await loadData()
     } catch (err: any) {
@@ -126,10 +134,26 @@ export function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-2xl font-bold text-white">
-            Welcome, {session.user.name || 'Coder'}
-          </h1>
-          <p className="text-surface-400 mt-1">Track your LeetCode progress</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                Welcome, {session.user.name || 'Coder'}
+              </h1>
+              <p className="text-surface-400 mt-1">Track your LeetCode progress</p>
+            </div>
+            {streak && (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <Flame className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-semibold text-amber-400">{streak.currentStreak}</span>
+                  <span className="text-xs text-surface-500">day streak</span>
+                </div>
+                <div className="text-xs text-surface-500">
+                  Best: <span className="text-surface-300 font-medium">{streak.longestStreak}</span>
+                </div>
+              </div>
+            )}
+          </div>
         </motion.div>
 
         {error && (
@@ -174,6 +198,61 @@ export function Dashboard() {
 
             <div className="mt-6">
               <ProblemList problems={problems} onRefresh={loadData} />
+            </div>
+
+            <div className="mt-6 glass-card p-6">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="flex items-center justify-between w-full"
+              >
+                <div className="flex items-center gap-2">
+                  <History className="w-5 h-5 text-surface-400" />
+                  <h3 className="text-lg font-semibold text-white">Solved History</h3>
+                  <span className="text-xs text-surface-500">({history.length})</span>
+                </div>
+                {showHistory ? <ChevronDown className="w-4 h-4 text-surface-400" /> : <ChevronRight className="w-4 h-4 text-surface-400" />}
+              </button>
+              {showHistory && (
+                <div className="mt-4 space-y-2 max-h-80 overflow-y-auto">
+                  {history.length === 0 ? (
+                    <p className="text-sm text-surface-500 text-center py-4">No solved problems yet. Start solving!</p>
+                  ) : (
+                    history.map((item: any, i: number) => (
+                      <div key={`${item.titleSlug}-${i}`} className="flex items-center gap-3 p-3 bg-surface-800/20 rounded-lg">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${
+                          item.difficulty === 'Easy' ? 'bg-emerald-500' :
+                          item.difficulty === 'Medium' ? 'bg-amber-500' : 'bg-red-500'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={item.leetcodeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-surface-300 hover:text-accent-400 transition-colors truncate"
+                            >
+                              {item.title}
+                            </a>
+                            <ExternalLink className="w-3 h-3 text-surface-500 shrink-0" />
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`text-xs ${
+                              item.difficulty === 'Easy' ? 'text-emerald-400' :
+                              item.difficulty === 'Medium' ? 'text-amber-400' : 'text-red-400'
+                            }`}>{item.difficulty}</span>
+                            <span className="text-surface-600">·</span>
+                            <span className="text-xs text-surface-500">
+                              {item.solvedDate ? new Date(item.solvedDate).toLocaleDateString() : 'Unknown date'}
+                            </span>
+                            <span className="text-surface-600">·</span>
+                            <span className="text-xs text-surface-500">Week {item.weekNumber}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </>
         ) : (

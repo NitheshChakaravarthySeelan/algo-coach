@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Target, Sparkles, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
+import { Target, Sparkles, ExternalLink, Loader2, RefreshCw, CheckCircle2, RotateCw, Lightbulb } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/Button'
 
@@ -11,6 +11,8 @@ interface Problem {
   topicTags: string[]
   leetcodeUrl: string
   acRate: number
+  status?: string
+  completedAt?: string | null
 }
 
 interface PlanData {
@@ -22,11 +24,24 @@ interface PlanData {
   explanation?: string
 }
 
+type DifficultyFilter = 'MIXED' | 'EASY' | 'MEDIUM' | 'HARD'
+
+const DIFFICULTY_COLORS: Record<string, string> = {
+  Easy: 'text-emerald-400 bg-emerald-500/10',
+  Medium: 'text-amber-400 bg-amber-500/10',
+  Hard: 'text-red-400 bg-red-500/10',
+}
+
+
 export function TodaysPlan() {
   const [plan, setPlan] = useState<PlanData | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [exists, setExists] = useState(false)
+  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('MIXED')
+  const [markingSlug, setMarkingSlug] = useState<string | null>(null)
+  const [regeneratingSlot, setRegeneratingSlot] = useState<number | null>(null)
+  const [easierSlug, setEasierSlug] = useState<string | null>(null)
 
   async function fetchPlan() {
     setLoading(true)
@@ -50,10 +65,83 @@ export function TodaysPlan() {
   async function generatePlan() {
     setGenerating(true)
     try {
-      const res = await api.plan.today.generate()
+      const res = await api.plan.today.generate(difficultyFilter)
       if (res.success) {
         setPlan(res.data)
         setExists(true)
+      }
+    } catch {
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function markProblem(slug: string, status: 'SOLVED' | 'TRIED' | 'SKIPPED' | 'PENDING') {
+    if (!plan) return
+    setMarkingSlug(slug)
+    try {
+      await api.plan.today.markProblem(plan.id, slug, status)
+      setPlan((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          problems: prev.problems.map((p) =>
+            p.titleSlug === slug
+              ? { ...p, status, completedAt: status === 'SOLVED' ? new Date().toISOString() : null }
+              : p,
+          ),
+        }
+      })
+    } catch {
+    } finally {
+      setMarkingSlug(null)
+    }
+  }
+
+  async function regenerateSlot(slot: number) {
+    if (!plan) return
+    setRegeneratingSlot(slot)
+    try {
+      const res = await api.plan.today.regenerate(plan.id, slot)
+      if (res.success) {
+        setPlan((prev) => {
+          if (!prev) return prev
+          return { ...prev, problems: res.data.problems }
+        })
+      }
+    } catch {
+    } finally {
+      setRegeneratingSlot(null)
+    }
+  }
+
+  async function onEasierProblem(slug: string, slot: number) {
+    if (!plan) return
+    setEasierSlug(slug)
+    try {
+      const res = await api.plan.today.regenerate(plan.id, slot, true)
+      if (res.success) {
+        setPlan((prev) => {
+          if (!prev) return prev
+          return { ...prev, problems: res.data.problems }
+        })
+      }
+    } catch {
+    } finally {
+      setEasierSlug(null)
+    }
+  }
+
+  async function regenerateAll() {
+    if (!plan) return
+    setGenerating(true)
+    try {
+      const res = await api.plan.today.regenerate(plan.id)
+      if (res.success) {
+        setPlan((prev) => {
+          if (!prev) return prev
+          return { ...prev, problems: res.data.problems }
+        })
       }
     } catch {
     } finally {
@@ -81,11 +169,14 @@ export function TodaysPlan() {
             <Target className="w-5 h-5 text-accent-400" />
             <h3 className="text-lg font-semibold text-white">Today's Plan</h3>
           </div>
+          <DifficultySelector value={difficultyFilter} onChange={setDifficultyFilter} />
         </div>
         <div className="text-center py-8">
           <Sparkles className="w-12 h-12 text-surface-600 mx-auto mb-3" />
           <p className="text-surface-400 text-sm mb-1">No plan for today yet</p>
-          <p className="text-surface-500 text-xs mb-4">Generate a personalized plan based on your roadmap</p>
+          <p className="text-surface-500 text-xs mb-4">
+            {difficultyFilter === 'MIXED' ? 'Will pick 1 Easy + 1 Medium + 1 Hard' : `Will pick 3 ${difficultyFilter.toLowerCase()} problems`}
+          </p>
           <Button onClick={generatePlan} disabled={generating}>
             {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : 'Generate Today\'s Plan'}
           </Button>
@@ -93,6 +184,9 @@ export function TodaysPlan() {
       </div>
     )
   }
+
+  const allSolved = plan.problems.every((p) => p.status === 'SOLVED')
+  const solvedCount = plan.problems.filter((p) => p.status === 'SOLVED').length
 
   return (
     <div className="glass-card p-6">
@@ -104,11 +198,17 @@ export function TodaysPlan() {
             <p className="text-xs text-surface-500">Week {plan.weekNumber} — {plan.topic}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {allSolved && plan.problems.length > 0 && (
+            <span className="text-xs text-emerald-400 font-medium flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> Done
+            </span>
+          )}
+          <DifficultySelector value={difficultyFilter} onChange={setDifficultyFilter} />
           <Button variant="secondary" size="sm" onClick={fetchPlan} disabled={loading}>
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button size="sm" onClick={generatePlan} disabled={generating}>
+          <Button size="sm" onClick={regenerateAll} disabled={generating}>
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             <span className="hidden sm:inline ml-1.5">Regenerate</span>
           </Button>
@@ -120,57 +220,172 @@ export function TodaysPlan() {
       )}
 
       <div className="space-y-3">
-        {plan.problems.map((problem, i) => (
-          <motion.div
-            key={problem.titleSlug}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="flex items-center gap-4 p-4 bg-surface-800/30 rounded-xl border border-surface-700/30 hover:border-surface-600/50 transition-colors group"
-          >
-            <div className="w-8 h-8 rounded-full bg-accent-500/10 flex items-center justify-center text-xs font-bold text-accent-400 shrink-0">
-              {i + 1}
-            </div>
-            <div className="flex-1 min-w-0">
-              <a
-                href={problem.leetcodeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium text-white hover:text-accent-400 transition-colors flex items-center gap-1.5"
-              >
-                {problem.title}
-                <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </a>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`text-xs font-medium ${
-                  problem.difficulty === 'Easy' ? 'text-surface-300' :
-                  problem.difficulty === 'Medium' ? 'text-surface-200' :
-                  'text-surface-100'
-                }`}>
-                  {problem.difficulty}
-                </span>
-                <span className="text-surface-600">·</span>
-                <span className="text-xs text-surface-500">{Math.round(problem.acRate)}% acceptance</span>
-              </div>
-            </div>
-            <div className="hidden sm:flex flex-wrap gap-1 max-w-[200px]">
-              {problem.topicTags.slice(0, 2).map((tag) => (
-                <span key={tag} className="px-2 py-0.5 bg-surface-800 rounded text-xs text-surface-400">
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <a
-              href={problem.leetcodeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 p-2 text-surface-500 hover:text-accent-400 transition-colors"
+        {plan.problems.map((problem, i) => {
+          const status = problem.status || 'PENDING'
+          const isMarking = markingSlug === problem.titleSlug
+          const isRegenerating = regeneratingSlot === i
+
+          return (
+            <motion.div
+              key={problem.titleSlug}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className={`p-4 rounded-xl border transition-colors ${
+                status === 'SOLVED'
+                  ? 'bg-emerald-500/5 border-emerald-500/20'
+                  : status === 'SKIPPED'
+                    ? 'bg-surface-800/20 border-surface-700/30 opacity-60'
+                    : 'bg-surface-800/30 border-surface-700/30 hover:border-surface-600/50'
+              }`}
             >
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </motion.div>
-        ))}
+              <div className="flex items-start gap-3">
+                <div className="flex flex-col items-center gap-1 pt-1">
+                  <button
+                    onClick={() => markProblem(problem.titleSlug, status === 'SOLVED' ? 'PENDING' : 'SOLVED')}
+                    disabled={isMarking}
+                    className="transition-transform hover:scale-110"
+                    title="Toggle solved"
+                  >
+                    {isMarking ? (
+                      <Loader2 className="w-5 h-5 text-accent-400 animate-spin" />
+                    ) : status === 'SOLVED' ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-surface-600 hover:border-emerald-500" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => regenerateSlot(i)}
+                    disabled={isRegenerating}
+                    className="text-surface-600 hover:text-accent-400 transition-colors"
+                    title="Replace this problem"
+                  >
+                    {isRegenerating ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <RotateCw className="w-3 h-3" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={problem.leetcodeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-white hover:text-accent-400 transition-colors"
+                    >
+                      {problem.title}
+                    </a>
+                    <a
+                      href={`${problem.leetcodeUrl}solutions/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-surface-500 hover:text-accent-400 transition-colors"
+                      title="View solution"
+                    >
+                      <Lightbulb className="w-3.5 h-3.5" />
+                    </a>
+                    <a
+                      href={problem.leetcodeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-surface-500 hover:text-accent-400 transition-colors"
+                      title="Open in LeetCode"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${DIFFICULTY_COLORS[problem.difficulty] || 'text-surface-400 bg-surface-800'}`}>
+                      {problem.difficulty}
+                    </span>
+                    <span className="text-xs text-surface-500">
+                      {Math.round(problem.acRate)}% AC
+                    </span>
+                    {problem.topicTags.slice(0, 3).map((tag) => (
+                      <span key={tag} className="px-1.5 py-0.5 bg-surface-800 rounded text-xs text-surface-400">
+                        {tag}
+                      </span>
+                    ))}
+                    {status !== 'PENDING' && status !== 'SOLVED' && (
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                        status === 'TRIED' ? 'bg-amber-500/10 text-amber-400' : 'bg-surface-700/50 text-surface-400'
+                      }`}>
+                        {status === 'TRIED' ? 'Tried' : 'Skipped'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-1 shrink-0">
+                  {status !== 'SOLVED' && (
+                    <button
+                      onClick={() => markProblem(problem.titleSlug, 'SOLVED')}
+                      disabled={isMarking}
+                      className="px-2 py-1 text-xs rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                    >
+                      Solved
+                    </button>
+                  )}
+                  {status === 'PENDING' && (
+                    <button
+                      onClick={() => markProblem(problem.titleSlug, 'TRIED')}
+                      disabled={isMarking}
+                      className="px-2 py-1 text-xs rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                    >
+                      Tried
+                    </button>
+                  )}
+                  {status === 'PENDING' && (
+                    <button
+                      onClick={() => markProblem(problem.titleSlug, 'SKIPPED')}
+                      disabled={isMarking}
+                      className="px-2 py-1 text-xs rounded-lg bg-surface-700/50 text-surface-400 hover:bg-surface-700 transition-colors disabled:opacity-50"
+                    >
+                      Skip
+                    </button>
+                  )}
+                  {status === 'TRIED' && (
+                    <button
+                      onClick={() => onEasierProblem(problem.titleSlug, i)}
+                      disabled={easierSlug === problem.titleSlug}
+                      className="px-2 py-1 text-xs rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
+                    >
+                      {easierSlug === problem.titleSlug ? <Loader2 className="w-3 h-3 animate-spin" /> : 'I\'m stuck'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )
+        })}
       </div>
+
+      {plan.problems.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-surface-700/30 flex items-center justify-between text-xs text-surface-500">
+          <span>{solvedCount} / {plan.problems.length} solved</span>
+          {allSolved && <span className="text-emerald-400 font-medium flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> All done!</span>}
+        </div>
+      )}
     </div>
+  )
+}
+
+function DifficultySelector({ value, onChange }: { value: DifficultyFilter; onChange: (v: DifficultyFilter) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as DifficultyFilter)}
+      className="text-xs bg-surface-800 border border-surface-700 rounded-lg px-2 py-1 text-surface-300 focus:outline-none focus:border-accent-500/50"
+    >
+      <option value="MIXED">Mixed</option>
+      <option value="EASY">Easy</option>
+      <option value="MEDIUM">Medium</option>
+      <option value="HARD">Hard</option>
+    </select>
   )
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Code2, ChevronRight, ChevronLeft, Check, Loader2 } from 'lucide-react'
-import { authClient } from '@/lib/auth-client'
+import { useSession } from '@/lib/use-session'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/Button'
 
@@ -30,7 +30,7 @@ const topicOptions = [
 
 export function Onboard() {
   const navigate = useNavigate()
-  const { data: session, isPending: authLoading } = authClient.useSession()
+  const { data: session, isPending: authLoading } = useSession()
 
   const [step, setStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)

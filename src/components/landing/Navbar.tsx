@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Code2, Menu, X, LogIn, GitBranch, LayoutDashboard, Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { authClient } from '@/lib/auth-client'
+import { useSession } from '@/lib/use-session'
 import { useTheme } from '@/lib/theme'
 
 const navItems = [
@@ -12,7 +13,7 @@ const navItems = [
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
-  const { data: session } = authClient.useSession()
+  const { data: session } = useSession()
   const { theme, toggleTheme } = useTheme()
 
   return (
