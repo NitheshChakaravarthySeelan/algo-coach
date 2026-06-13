@@ -1,10 +1,11 @@
 import { handle } from 'hono/netlify'
-import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
+import { stream } from '@netlify/functions'
+import { Readable } from 'node:stream'
 import app from '../../server/index'
 
 const honoHandler = handle(app)
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler = stream(async (event, context) => {
   const host = event.headers['x-forwarded-host'] || event.headers['host'] || 'localhost'
   const url = new URL(event.path, `https://${host}`)
 
@@ -28,12 +29,19 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
   })
 
   const response = await honoHandler(request, context)
+  const headers = Object.fromEntries(response.headers)
+
+  if (response.body && headers['content-type']?.startsWith('text/event-stream')) {
+    return {
+      statusCode: response.status,
+      headers,
+      body: Readable.from(response.body as ReadableStream),
+    }
+  }
 
   return {
     statusCode: response.status,
-    headers: Object.fromEntries(response.headers),
+    headers,
     body: await response.text(),
   }
-}
-
-export { handler }
+})
