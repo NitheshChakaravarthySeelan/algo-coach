@@ -69,8 +69,7 @@ export function Dashboard() {
   useEffect(() => {
     if (!session) return
     api.onboard.status()
-      .then((res: any) => {
-        if (!res.onboarded) { navigate('/onboard', { replace: true }); return }
+      .then(() => {
         setCheckingOnboard(false)
         loadData()
       })
@@ -84,7 +83,7 @@ export function Dashboard() {
     if (!lcUsername.trim()) return
     setLinking(true)
     try {
-      await api.leetcode.link({ username: lcUsername.trim() })
+      await api.leetcode.link({ leetcodeUsername: lcUsername.trim() })
       setLcUsername('')
       await loadData()
     } catch (err: any) {
@@ -211,7 +210,7 @@ export function Dashboard() {
                 LeetCode: <span className="text-accent-400 font-medium">{stats.leetcodeUsername}</span>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="secondary" onClick={() => { loadData(); api.leetcode.refresh().catch(() => {}) }}>
+                <Button size="sm" variant="secondary" onClick={async () => { setError(''); await loadData(); try { await api.leetcode.refresh(); await loadData() } catch (err: any) { setError(err.message || 'Refresh failed') } }}>
                   <RefreshCw className="w-4 h-4" />
                   <span className="hidden sm:inline">Refresh</span>
                 </Button>

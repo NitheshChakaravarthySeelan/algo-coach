@@ -44,7 +44,7 @@ export function Hero() {
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </a>
-              <Button variant="outline" size="lg" className="gap-2">
+              <Button variant="outline" size="lg" className="gap-2" onClick={() => document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth' })}>
                 <Play className="w-4 h-4" />
                 View Demo
               </Button>

@@ -26,10 +26,10 @@ export function Footer() {
           </div>
 
           <div className="flex items-center gap-4">
-            <a href="#" className="text-surface-500 hover:text-surface-300 transition-colors">
+            <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener noreferrer" className="text-surface-500 hover:text-surface-300 transition-colors">
               <MessageCircle className="w-4 h-4" />
             </a>
-            <a href="#" className="text-surface-500 hover:text-surface-300 transition-colors">
+            <a href="https://leetcode.com" target="_blank" rel="noopener noreferrer" className="text-surface-500 hover:text-surface-300 transition-colors">
               <Globe className="w-4 h-4" />
             </a>
           </div>

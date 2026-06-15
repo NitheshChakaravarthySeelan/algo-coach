@@ -61,7 +61,7 @@ export const api = {
     list: () => request<{ success: boolean; data: any[] }>('/survey'),
   },
   leetcode: {
-    link: (body: { username: string }) =>
+    link: (body: { leetcodeUsername: string }) =>
       request<{ success: boolean; data: any }>('/leetcode/link', { method: 'POST', body: JSON.stringify(body) }),
     stats: () => request<{ success: boolean; data: any }>('/leetcode/stats'),
     refresh: () => request<{ success: boolean; data: any }>('/leetcode/refresh', { method: 'POST' }),

@@ -48,7 +48,9 @@ export function RoadmapOverview() {
       try {
         const pRes = await api.plan.roadmapProgress()
         if (pRes.success) setProgress(pRes.data)
-      } catch {}
+      } catch (e: any) {
+        setError(e?.message || 'Failed to load progress')
+      }
     } catch (e: any) {
       setError(e?.message || 'Failed to load roadmap')
     }
@@ -98,7 +100,8 @@ export function RoadmapOverview() {
         const pRes = await api.plan.roadmapProgress()
         if (pRes.success) setProgress(pRes.data)
       }
-    } catch {
+    } catch (e: any) {
+      setError(e?.message || 'Failed to advance week')
     } finally {
       setAdvancing(false)
     }
