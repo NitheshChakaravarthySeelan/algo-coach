@@ -122,7 +122,7 @@ export function extractJson(text: string): string {
       try {
         JSON.parse(candidate)
         return candidate
-      } catch {}
+      } catch { }
     }
   }
   return text

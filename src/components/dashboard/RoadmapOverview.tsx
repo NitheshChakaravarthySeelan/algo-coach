@@ -48,8 +48,8 @@ export function RoadmapOverview() {
       try {
         const pRes = await api.plan.roadmapProgress()
         if (pRes.success) setProgress(pRes.data)
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load progress')
+      } catch {
+        // progress returns 400 when roadmap hasn't been generated yet — expected
       }
     } catch (e: any) {
       setError(e?.message || 'Failed to load roadmap')
@@ -140,17 +140,43 @@ export function RoadmapOverview() {
           <h3 className="text-lg font-semibold text-surface-200">Your Roadmap</h3>
         </div>
         <div className="text-center py-8">
-          <div className="w-16 h-16 rounded-2xl bg-accent-500/10 flex items-center justify-center mx-auto mb-4">
-            <MapPin className="w-8 h-8 text-accent-400" />
-          </div>
-          <p className="text-surface-400 text-sm mb-1">No roadmap yet</p>
-          <p className="text-surface-500 text-xs mb-5">
-            Create a personalized study roadmap tailored to your goals
-          </p>
-          <Button onClick={() => generate()} disabled={generating}>
-            {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            Build Your Roadmap
-          </Button>
+          {generating ? (
+            <>
+              <RefreshCw className="w-10 h-10 text-accent-400 mx-auto mb-3 animate-spin" />
+              <p className="text-surface-400 text-sm mb-2">Generating your personalized roadmap...</p>
+              {streamText && (
+                <pre className="text-xs text-surface-500 text-left max-h-32 overflow-y-auto bg-surface-900/50 rounded-lg p-3 mx-auto max-w-md whitespace-pre-wrap">
+                  {streamText}
+                </pre>
+              )}
+            </>
+          ) : genError ? (
+            <>
+              <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-red-400" />
+              </div>
+              <p className="text-surface-400 text-sm mb-1">Generation failed</p>
+              <p className="text-red-400 text-xs mb-5">{genError}</p>
+              <Button onClick={() => generate()}>
+                <Sparkles className="w-4 h-4" />
+                Try Again
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-2xl bg-accent-500/10 flex items-center justify-center mx-auto mb-4">
+                <MapPin className="w-8 h-8 text-accent-400" />
+              </div>
+              <p className="text-surface-400 text-sm mb-1">No roadmap yet</p>
+              <p className="text-surface-500 text-xs mb-5">
+                Create a personalized study roadmap tailored to your goals
+              </p>
+              <Button onClick={() => generate()}>
+                <Sparkles className="w-4 h-4" />
+                Build Your Roadmap
+              </Button>
+            </>
+          )}
           {error && (
             <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 text-left flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />

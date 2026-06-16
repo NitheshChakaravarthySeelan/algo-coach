@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { streamSSE } from 'hono/streaming'
 import { db } from '../db'
 import { userPreferences, roadmapPlan, dailyPlan, dailyProgress } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
@@ -77,15 +78,8 @@ app.post('/roadmap/generate', async (c) => {
     return c.json({ success: false, error: 'Complete onboarding first' }, 400)
   }
 
-  const encoder = new TextEncoder()
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (data: unknown) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
-      }
-
-      try {
-        const prompt = `You are a LeetCode coach creating a personalized study roadmap.
+  return streamSSE(c, async (stream) => {
+    const prompt = `You are a LeetCode coach creating a personalized study roadmap.
 
 User Profile:
 - Experience: ${prefs.experienceLevel}
@@ -107,55 +101,51 @@ IMPORTANT: Each topic MUST be a valid LeetCode problem tag name (e.g., "Arrays",
 
 Aim for 4-12 weeks total depending on the user's experience and goals.`
 
-        const provider = createProvider()
-        let fullText = ""
+    const provider = createProvider()
+    let fullText = ""
 
-        for await (const chunk of provider.generateStream({ prompt, temperature: 0.7 })) {
-          fullText += chunk
-          send({ type: "token", text: chunk })
-        }
-
-        const cleaned = extractJson(fullText)
-        let parsed: any
-        try {
-          parsed = JSON.parse(cleaned)
-        } catch {
-          send({ type: "error", message: "Failed to parse roadmap from AI response" })
-          return
-        }
-
-        const weeks = Array.isArray(parsed) ? parsed : parsed.weeks || parsed.roadmap || []
-
-        await db.update(roadmapPlan).set({
-          weeks: JSON.parse(JSON.stringify(weeks)),
-          currentWeek: 1,
-          updatedAt: new Date(),
-        }).where(eq(roadmapPlan.userId, userId))
-
-        const updated = await db.query.roadmapPlan.findFirst({
-          where: eq(roadmapPlan.userId, userId),
-        })
-
-        send({ type: "done", data: { ...updated, ready: true } })
-      } catch (err: any) {
-        const msg = err.message || ""
-        if (msg.includes("429") || msg.includes("quota") || msg.includes("Too Many Requests")) {
-          send({ type: "error", message: "AI quota reached. Please try again in a minute.", retryAfter: 60 })
-        } else {
-          send({ type: "error", message: `Failed to generate roadmap: ${msg}` })
-        }
-      } finally {
-        controller.close()
+    try {
+      for await (const chunk of provider.generateStream({ prompt, temperature: 0.7 })) {
+        fullText += chunk
+        await stream.writeSSE({ data: JSON.stringify({ type: "token", text: chunk }) })
       }
-    },
-  })
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-    },
+      const cleaned = extractJson(fullText)
+      let parsed: any
+      try {
+        parsed = JSON.parse(cleaned)
+      } catch {
+        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "Failed to parse roadmap from AI response" }) })
+        return
+      }
+
+      const weeks = Array.isArray(parsed) ? parsed : parsed.weeks || parsed.roadmap || []
+
+      await db.update(roadmapPlan).set({
+        weeks: JSON.parse(JSON.stringify(weeks)),
+        currentWeek: 1,
+        updatedAt: new Date(),
+      }).where(eq(roadmapPlan.userId, userId))
+
+      const updated = await db.query.roadmapPlan.findFirst({
+        where: eq(roadmapPlan.userId, userId),
+      })
+
+      await stream.writeSSE({ data: JSON.stringify({ type: "done", data: { ...updated, ready: true } }) })
+    } catch (err: any) {
+      const msg = err.message || ""
+      let inner: string
+      try { inner = JSON.parse(JSON.parse(msg).error?.message || msg).error?.message || msg } catch { inner = msg }
+      if (inner.includes("API_KEY") || inner.includes("API key")) {
+        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "Invalid or missing AI API key. Check your GEMINI_API_KEY or GROQ_API_KEY." }) })
+      } else if (inner.includes("429") || inner.includes("quota") || inner.includes("Too Many Requests") || inner.includes("RATE_LIMIT")) {
+        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "AI quota reached. Please try again in a minute.", retryAfter: 60 }) })
+      } else if (inner.includes("500") || inner.includes("INTERNAL") || inner.includes("Internal error")) {
+        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "AI provider returned an error. The model may be unavailable. Try setting AI_PROVIDER=groq or a different AI_MODEL." }) })
+      } else {
+        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: inner }) })
+      }
+    }
   })
 })
 

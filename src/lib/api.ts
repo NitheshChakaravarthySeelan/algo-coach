@@ -23,7 +23,10 @@ async function consumeSSE<T>(
     onError?: (message: string, retryAfter?: number) => void
   },
 ): Promise<void> {
-  const res = await fetch(`${BASE}${path}`, { method: 'POST' })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 180_000)
+  const res = await fetch(`${BASE}${path}`, { method: 'POST', signal: controller.signal })
+  clearTimeout(timeout)
   if (!res.ok) throw new Error(`Server error (${res.status})`)
 
   const reader = res.body!.getReader()
