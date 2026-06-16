@@ -29,6 +29,18 @@ async function consumeSSE<T>(
   clearTimeout(timeout)
   if (!res.ok) throw new Error(`Server error (${res.status})`)
 
+  // Handle standard JSON responses (e.g. cached roadmap, error without SSE)
+  const contentType = res.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) {
+    const json = await res.json()
+    if (json.success && callbacks.onDone) {
+      callbacks.onDone(json.data)
+    } else if (!json.success && callbacks.onError) {
+      callbacks.onError(json.error || 'Request failed')
+    }
+    return
+  }
+
   const reader = res.body!.getReader()
   const decoder = new TextDecoder()
   let buffer = ''

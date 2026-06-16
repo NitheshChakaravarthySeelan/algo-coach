@@ -68,7 +68,9 @@ app.post('/roadmap/generate', async (c) => {
   const force = c.req.query('force') === 'true'
   const existingWeeks = Array.isArray(planRecord.weeks) ? planRecord.weeks : []
   if (existingWeeks.length > 0 && !force) {
-    return c.json({ success: true, data: { ...planRecord, ready: true } })
+    return streamSSE(c, async (stream) => {
+      await stream.writeSSE({ data: JSON.stringify({ type: "done", data: { ...planRecord, ready: true } }) })
+    })
   }
 
   const prefs = await db.query.userPreferences.findFirst({
