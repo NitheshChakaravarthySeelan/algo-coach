@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, GitBranch, Sun, Moon, Flame, History, ChevronDown, ChevronRight, ExternalLink, AlertTriangle } from 'lucide-react'
+import { Code2, LogOut, RefreshCw, Plus, Loader2, Link2, GitBranch, Sun, Moon, Flame, History, ChevronDown, ChevronRight, ExternalLink, AlertTriangle, Settings } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { useSession } from '@/lib/use-session'
 import { api } from '@/lib/api'
@@ -217,6 +217,10 @@ export function Dashboard() {
                 <Button size="sm" onClick={() => setShowLogModal(true)}>
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Log Problem</span>
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => navigate('/onboard')}>
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">Preferences</span>
                 </Button>
               </div>
             </div>

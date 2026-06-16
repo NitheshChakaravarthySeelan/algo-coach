@@ -54,6 +54,24 @@ app.get('/stats', async (c) => {
 
     if (!account) return c.json({ success: false, error: 'No LeetCode account linked' }, 404)
 
+    const stale = !account.updatedAt || Date.now() - new Date(account.updatedAt).getTime() > 3_600_000
+
+    if (stale) {
+      try {
+        const stats = await fetchLeetcodeStats(account.leetcodeUsername)
+        await db.update(leetcodeAccount).set({
+          totalSolved: stats.totalSolved,
+          easySolved: stats.easySolved,
+          mediumSolved: stats.mediumSolved,
+          hardSolved: stats.hardSolved,
+          updatedAt: new Date(),
+        }).where(eq(leetcodeAccount.userId, userId))
+        return c.json({ success: true, data: { ...account, ...stats, updatedAt: new Date().toISOString() } })
+      } catch {
+        return c.json({ success: true, data: account })
+      }
+    }
+
     return c.json({ success: true, data: account })
   } catch (err: any) {
     return c.json({ success: false, error: err.message || 'Failed to fetch stats' }, 500)
