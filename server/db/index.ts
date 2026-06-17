@@ -1,12 +1,22 @@
-import { neon } from '@neondatabase/serverless'
-import { drizzle } from 'drizzle-orm/neon-http'
-import * as schema from './schema'
+import { Database } from "bun:sqlite"
+import { drizzle } from "drizzle-orm/bun-sqlite"
+import * as schema from "./schema"
+import { createTables } from "./setup"
+import path from "path"
+import fs from "fs"
+
+function getDbPath(): string {
+  const home = process.env.HOME || process.env.USERPROFILE || "."
+  const dir = path.join(home, ".leetcode-tracker")
+  fs.mkdirSync(dir, { recursive: true })
+  return path.join(dir, "data.db")
+}
 
 function createDb() {
-  const url = process.env.DATABASE_URL
-  if (!url) throw new Error('DATABASE_URL is not set')
-  const sql = neon(url)
-  return drizzle(sql, { schema })
+  const dbPath = getDbPath()
+  const sqlite = new Database(dbPath)
+  createTables(sqlite)
+  return drizzle(sqlite, { schema })
 }
 
 let _db: ReturnType<typeof createDb> | null = null

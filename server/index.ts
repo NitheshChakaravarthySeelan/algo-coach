@@ -1,11 +1,14 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { serveStatic } from 'hono/bun'
 import { auth } from './auth'
 import { rateLimit } from './middleware/rate-limit'
 import surveyRoutes from './routes/survey'
 import leetcodeRoutes from './routes/leetcode'
 import onboardRoutes from './routes/onboard'
 import planRoutes from './routes/plan'
+import path from 'path'
+import fs from 'fs'
 
 const app = new Hono()
 
@@ -34,8 +37,20 @@ app.route('/api/plan', planRoutes)
 
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
-const port = parseInt(process.env.PORT || '3000')
-if (typeof Bun !== 'undefined') {
+const distPath = path.resolve(import.meta.dir, "..", "dist")
+if (fs.existsSync(distPath)) {
+  app.use('/assets/*', serveStatic({ root: distPath }))
+  app.use('/favicon.svg', serveStatic({ root: distPath }))
+  app.use('/icons.svg', serveStatic({ root: distPath }))
+  app.get('*', async (c) => {
+    if (c.req.path.startsWith('/api/')) return c.text('Not found', 404)
+    const file = Bun.file(path.join(distPath, 'index.html'))
+    if (await file.exists()) return new Response(file, { headers: { 'Content-Type': 'text/html' } })
+    return c.text('Not found', 404)
+  })
+}
+
+export function serve(port: number = 3000) {
   Bun.serve({ fetch: app.fetch, port, idleTimeout: 255 })
 }
 

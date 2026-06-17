@@ -3,8 +3,12 @@ import { streamSSE } from 'hono/streaming'
 import { db } from '../db'
 import { userPreferences, roadmapPlan, dailyPlan, dailyProgress, roadmapJob } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
-import { eq, and, gte, desc } from 'drizzle-orm'
+import { eq, and, gte, desc, sql } from 'drizzle-orm'
 import { selectDailyProblems, startJobProcessing } from '../services/ai'
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms))
+}
 
 function tryParseError(msg: string): string {
   try {
@@ -119,7 +123,7 @@ app.get('/roadmap/jobs/:jobId', async (c) => {
   return c.json({ success: true, data: job })
 })
 
-app.get('/roadmap/jobs/:jobId/stream', async (c) => {
+app.post('/roadmap/jobs/:jobId/stream', async (c) => {
   const userId = c.get('userId')
   const { jobId } = c.req.param()
 
@@ -140,8 +144,15 @@ app.get('/roadmap/jobs/:jobId/stream', async (c) => {
       await stream.writeSSE({ data: JSON.stringify({ type: "token", text: lastProgress }) })
     }
 
+    const pollStart = Date.now()
+    const MAX_POLL_MS = 180_000
+
     while (lastStatus === "pending" || lastStatus === "processing") {
-      await Bun.sleep(500)
+      if (Date.now() - pollStart > MAX_POLL_MS) {
+        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "Generation timed out. Please try again." }) })
+        return
+      }
+      await sleep(500)
 
       const current = await db.query.roadmapJob.findFirst({
         where: and(eq(roadmapJob.id, jobId), eq(roadmapJob.userId, userId)),
@@ -236,16 +247,14 @@ app.get('/roadmap/progress', async (c) => {
 app.get('/today', async (c) => {
   try {
     const userId = c.get('userId')
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    const todayMs = Date.now() - (Date.now() % 86400000)
+    const tomorrowMs = todayMs + 86400000
 
     const plan = await db.query.dailyPlan.findFirst({
       where: and(
         eq(dailyPlan.userId, userId),
-        gte(dailyPlan.date, today),
-        gte(tomorrow, dailyPlan.date),
+        sql`${dailyPlan.date} >= ${todayMs}`,
+        sql`${dailyPlan.date} < ${tomorrowMs}`,
       ),
     })
     if (!plan) return c.json({ success: false, exists: false }, 404)
@@ -261,16 +270,14 @@ app.post('/today', async (c) => {
     const body: any = await c.req.json().catch(() => ({}))
     const difficultyFilter = (body.difficulty || "MIXED") as "EASY" | "MEDIUM" | "HARD" | "MIXED"
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    const todayMs = Date.now() - (Date.now() % 86400000)
+    const tomorrowMs = todayMs + 86400000
 
     const existing = await db.query.dailyPlan.findFirst({
       where: and(
         eq(dailyPlan.userId, userId),
-        gte(dailyPlan.date, today),
-        gte(tomorrow, dailyPlan.date),
+        sql`${dailyPlan.date} >= ${todayMs}`,
+        sql`${dailyPlan.date} < ${tomorrowMs}`,
       ),
     })
     if (existing) return c.json({ success: true, data: existing, exists: true }, 200)
@@ -325,7 +332,7 @@ app.post('/today', async (c) => {
       date: new Date(),
       weekNumber: currentWeek,
       topic: (roadmap[currentWeek - 1] as Record<string, unknown>)?.topic as string || '',
-      problems: JSON.parse(JSON.stringify(problems)),
+      problems,
     }
 
     await db.insert(dailyPlan).values(entry)
@@ -355,13 +362,11 @@ app.patch('/today/:planId/problem/:slug', async (c) => {
     const idx = problems.findIndex((p: any) => (p as Record<string, unknown>).titleSlug === slug)
     if (idx === -1) return c.json({ success: false, error: 'Problem not found in this plan' }, 404)
 
-    const problem = { ...(problems[idx] as Record<string, unknown>) }
-    problem.status = status
-    problem.completedAt = status === "SOLVED" ? new Date().toISOString() : null
+    const problem = { ...problems[idx], status, completedAt: status === "SOLVED" ? new Date().toISOString() : null }
     problems[idx] = problem
 
     await db.update(dailyPlan)
-      .set({ problems: JSON.parse(JSON.stringify(problems)) })
+      .set({ problems })
       .where(eq(dailyPlan.id, planId))
 
     const existingProgress = await db.query.dailyProgress.findFirst({
@@ -477,7 +482,7 @@ app.post('/today/:planId/regenerate', async (c) => {
     }
 
     await db.update(dailyPlan)
-      .set({ problems: JSON.parse(JSON.stringify(existingProblems)) })
+      .set({ problems: existingProblems })
       .where(eq(dailyPlan.id, planId))
 
     return c.json({ success: true, data: { ...plan, problems: existingProblems } })

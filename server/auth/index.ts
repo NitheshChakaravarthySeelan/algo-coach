@@ -8,7 +8,7 @@ const productionUrl = process.env.BETTER_AUTH_URL || ''
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
-    provider: 'pg',
+    provider: 'sqlite',
     schema,
   }),
   socialProviders: {

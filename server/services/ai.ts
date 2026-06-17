@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 import { db } from "../db"
 import { roadmapJob, roadmapPlan, userPreferences } from "../db/schema"
 import { createProvider, extractJson } from "./ai-provider"
@@ -58,10 +58,11 @@ export async function generateRoadmap(preferences: UserPreferences): Promise<Roa
 }
 
 export async function processRoadmapJob(jobId: string): Promise<void> {
-  const job = await db.query.roadmapJob.findFirst({ where: eq(roadmapJob.id, jobId) })
+  const [job] = await db.update(roadmapJob)
+    .set({ status: "processing", updatedAt: new Date() })
+    .where(and(eq(roadmapJob.id, jobId), eq(roadmapJob.status, "pending")))
+    .returning()
   if (!job) return
-
-  await db.update(roadmapJob).set({ status: "processing", updatedAt: new Date() }).where(eq(roadmapJob.id, jobId))
 
   const prefs = await db.query.userPreferences.findFirst({ where: eq(userPreferences.userId, job.userId) })
   if (!prefs) {
@@ -73,7 +74,7 @@ export async function processRoadmapJob(jobId: string): Promise<void> {
     experienceLevel: prefs.experienceLevel,
     goals: prefs.goals,
     weakTopics: prefs.weakTopics,
-    targetCompanies: prefs.targetCompanies,
+    targetCompanies: prefs.targetCompanies ?? undefined,
     hoursPerWeek: prefs.hoursPerWeek,
     targetDate: prefs.targetDate?.toISOString(),
   })
@@ -99,16 +100,16 @@ export async function processRoadmapJob(jobId: string): Promise<void> {
     await db.insert(roadmapPlan).values({
       id: crypto.randomUUID(),
       userId: job.userId,
-      weeks: JSON.parse(JSON.stringify(weeks)),
+      weeks,
       currentWeek: 1,
     }).onConflictDoUpdate({
       target: roadmapPlan.userId,
-      set: { weeks: JSON.parse(JSON.stringify(weeks)), currentWeek: 1, updatedAt: new Date() },
+      set: { weeks, currentWeek: 1, updatedAt: new Date() },
     })
 
     await db.update(roadmapJob).set({
       status: "done",
-      result: JSON.parse(JSON.stringify(weeks)),
+      result: weeks,
       progress: fullText,
       updatedAt: new Date(),
     }).where(eq(roadmapJob.id, jobId))

@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 .env
+.oldenv
 
 # Editor directories and files
 .vscode/*
@@ -24,6 +25,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local Netlify folder
-.netlify
-.oldenv
+# SQLite database (created in ~/.leetcode-tracker/)
+*.db
+*.db-shm
+*.db-wal
