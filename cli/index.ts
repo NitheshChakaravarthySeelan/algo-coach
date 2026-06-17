@@ -86,23 +86,23 @@ async function cmdStart() {
   process.env.LOCAL_DEV = "true"
   process.env.LOCAL_USER_ID = "local-user"
   process.env.BETTER_AUTH_SECRET = "local-dev-secret-min-32-chars-long-for-better-auth"
+  process.env.BETTER_AUTH_URL = `http://localhost:${preferredPort}`
+  process.env.CORS_ORIGIN = `http://localhost:${preferredPort}`
 
   const { serve } = await import("../server/index")
   const { port } = serve(preferredPort)
 
-  process.env.BETTER_AUTH_URL = `http://localhost:${port}`
-  process.env.CORS_ORIGIN = `http://localhost:${port}`
-
   const url = `http://localhost:${port}`
+
   console.log(`\n  AlgoCoach running at ${url}\n`)
 
-  // Auto-open browser
+  // Auto-open browser (fire-and-forget)
   const openCmd = process.platform === "darwin"
     ? ["open", url]
     : process.platform === "win32"
       ? ["cmd", "/c", "start", url]
       : ["xdg-open", url]
-  Bun.spawn(openCmd).unwrap().catch(() => {})
+  Bun.spawn(openCmd).catch(() => {})
 }
 
 const cmd = process.argv[2] || "start"
