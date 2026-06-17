@@ -21,8 +21,8 @@ algocoach start
 
 ## Setup
 
-1. Run `algocoach start` — creates `.env` in the current directory
-2. Edit `.env` — uncomment and set at least one API key:
+1. Run `algocoach start` — creates `~/.algocoach/.env`
+2. Edit `~/.algocoach/.env` — uncomment and set at least one API key:
 
 ```env
 AI_PROVIDER=google
@@ -88,7 +88,7 @@ src/                — React frontend (Vite + Tailwind)
 ## Data
 
 - **Database**: `~/.algocoach/data.db` — SQLite, created on first use
-- **Config**: `.env` in the working directory
+- **Config**: `~/.algocoach/.env` — API keys and settings
 
 ## AI Providers
 
