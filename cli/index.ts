@@ -96,13 +96,15 @@ async function cmdStart() {
 
   console.log(`\n  AlgoCoach running at ${url}\n`)
 
-  // Auto-open browser (fire-and-forget)
-  const openCmd = process.platform === "darwin"
-    ? ["open", url]
-    : process.platform === "win32"
-      ? ["cmd", "/c", "start", url]
-      : ["xdg-open", url]
-  Bun.spawn(openCmd).catch(() => {})
+  // Auto-open browser
+  try {
+    const openCmd = process.platform === "darwin"
+      ? ["open", url]
+      : process.platform === "win32"
+        ? ["cmd", "/c", "start", url]
+        : ["xdg-open", url]
+    Bun.spawnSync(openCmd)
+  } catch {}
 }
 
 const cmd = process.argv[2] || "start"
