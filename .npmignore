@@ -1,0 +1,6 @@
+.env
+.env.*
+.oldenv
+*.db
+*.db-shm
+*.db-wal

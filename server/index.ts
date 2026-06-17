@@ -50,8 +50,19 @@ if (fs.existsSync(distPath)) {
   })
 }
 
-export function serve(port: number = 3000) {
-  Bun.serve({ fetch: app.fetch, port, idleTimeout: 255 })
+export function serve(preferredPort: number = 3000) {
+  const maxAttempts = 10
+  for (let i = 0; i < maxAttempts; i++) {
+    const port = preferredPort + i
+    try {
+      const server = Bun.serve({ fetch: app.fetch, port, idleTimeout: 255 })
+      return { server, port }
+    } catch (err: any) {
+      if (err.code !== "EADDRINUSE" || i === maxAttempts - 1) {
+        throw err
+      }
+    }
+  }
 }
 
 export default app
