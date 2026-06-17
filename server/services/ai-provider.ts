@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai"
+import OpenAI from "openai"
 
 const AI_TIMEOUT = 180_000
 
@@ -42,6 +43,45 @@ export class GoogleAIProvider implements AIProvider {
     for await (const chunk of stream) {
       const t = chunk.text
       if (t) yield t
+    }
+  }
+}
+
+export class NvidiaAIProvider implements AIProvider {
+  private client: OpenAI
+  readonly model: string
+
+  constructor(model?: string) {
+    const key = process.env.NVIDIA_API_KEY
+    if (!key) throw new Error("NVIDIA_API_KEY not set")
+    this.client = new OpenAI({
+      apiKey: key,
+      baseURL: "https://integrate.api.nvidia.com/v1",
+      timeout: AI_TIMEOUT,
+      maxRetries: 2,
+    })
+    this.model = model || process.env.AI_MODEL || "meta/llama-3.1-8b-instruct"
+  }
+
+  async generate(options: GenerateOptions): Promise<string> {
+    let text = ""
+    for await (const chunk of this.generateStream(options)) {
+      text += chunk
+    }
+    return text
+  }
+
+  async *generateStream(options: GenerateOptions): AsyncGenerator<string> {
+    const stream = await this.client.chat.completions.create({
+      model: this.model,
+      messages: [{ role: "user", content: options.prompt }],
+      temperature: options.temperature ?? 0.7,
+      stream: true,
+      ...(options.jsonMode ? { response_format: { type: "json_object" } } : {}),
+    })
+    for await (const chunk of stream) {
+      const content = chunk.choices?.[0]?.delta?.content
+      if (content) yield content
     }
   }
 }
@@ -105,8 +145,10 @@ export function createProvider(model?: string): AIProvider {
       return new GroqAIProvider(model)
     case "google":
       return new GoogleAIProvider(model)
+    case "nvidia":
+      return new NvidiaAIProvider(model)
     default:
-      throw new Error(`Unknown AI provider: ${providerName}. Use "google" or "groq"`)
+      throw new Error(`Unknown AI provider: ${providerName}. Use "google", "groq", or "nvidia"`)
   }
 }
 

@@ -121,3 +121,14 @@ export const dailyPlan = pgTable("daily_plan", {
   problems: jsonb("problems").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const roadmapJob = pgTable("roadmap_job", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id),
+  status: text("status").notNull().default("pending"),
+  progress: text("progress"),
+  result: jsonb("result"),
+  error: text("error"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});

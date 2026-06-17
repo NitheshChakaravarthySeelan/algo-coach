@@ -94,11 +94,33 @@ export const api = {
   },
   plan: {
     roadmap: () => request<{ success: boolean; data: any }>('/plan/roadmap'),
-    roadmapGenerate: (callbacks: {
+    roadmapGenerate: async (callbacks: {
       onToken?: (text: string) => void
       onDone?: (data: any) => void
       onError?: (message: string, retryAfter?: number) => void
-    }, force?: boolean) => consumeSSE(`/plan/roadmap/generate${force ? '?force=true' : ''}`, callbacks),
+    }, force?: boolean) => {
+      const res = await fetch(`${BASE}/plan/roadmap/generate${force ? '?force=true' : ''}`, { method: 'POST' })
+      if (res.headers.get('content-type')?.includes('application/json')) {
+        const json = await res.json()
+        if (!json.success) {
+          if (callbacks.onError) callbacks.onError(json.error || 'Generation failed')
+          return
+        }
+        if (json.data?.ready) {
+          if (callbacks.onDone) callbacks.onDone(json.data)
+          return
+        }
+        const jobId = json.data?.jobId
+        if (!jobId) {
+          if (callbacks.onError) callbacks.onError('No job ID returned')
+          return
+        }
+        await consumeSSE(`/plan/roadmap/jobs/${jobId}/stream`, callbacks)
+      } else {
+        const json = await res.json().catch(() => ({}))
+        if (callbacks.onError) callbacks.onError(json.error || 'Unexpected response')
+      }
+    },
     roadmapProgress: () => request<{ success: boolean; data: any }>('/plan/roadmap/progress'),
     roadmapAdvance: () =>
       request<{ success: boolean; data: any }>('/plan/roadmap/advance', { method: 'PATCH' }),

@@ -1,3 +1,6 @@
+import { eq } from "drizzle-orm"
+import { db } from "../db"
+import { roadmapJob, roadmapPlan, userPreferences } from "../db/schema"
 import { createProvider, extractJson } from "./ai-provider"
 import { searchLeetCodeProblems } from "./leetcode-search"
 
@@ -19,16 +22,16 @@ interface RoadmapWeek {
   problemsCount: number
 }
 
-export async function generateRoadmap(preferences: UserPreferences): Promise<RoadmapWeek[]> {
-  const prompt = `You are a LeetCode coach creating a personalized study roadmap.
+function buildPrompt(prefs: UserPreferences): string {
+  return `You are a LeetCode coach creating a personalized study roadmap.
 
 User Profile:
-- Experience: ${preferences.experienceLevel}
-- Goals: ${preferences.goals.join(", ")}
-- Weak topics: ${preferences.weakTopics.join(", ")}
-- Target companies: ${preferences.targetCompanies?.join(", ") || "Not specified"}
-- Hours per week: ${preferences.hoursPerWeek}
-- Target date: ${preferences.targetDate || "No deadline"}
+- Experience: ${prefs.experienceLevel}
+- Goals: ${prefs.goals.join(", ")}
+- Weak topics: ${prefs.weakTopics.join(", ")}
+- Target companies: ${prefs.targetCompanies?.join(", ") || "Not specified"}
+- Hours per week: ${prefs.hoursPerWeek}
+- Target date: ${prefs.targetDate || "No deadline"}
 
 Create a structured weekly roadmap that:
 1. Starts with fundamentals and progresses to advanced topics
@@ -41,15 +44,85 @@ Return a JSON array where each entry has: week (number), topic (string), descrip
 IMPORTANT: Each topic MUST be a valid LeetCode problem tag name (e.g., "Arrays", "Strings", "Hash Table", "Dynamic Programming", "Linked List", "Binary Search", "Trees", "Graph", "Heap", "Backtracking", "Sliding Window", "Two Pointers", "Stack", "Queue", "Math", "Sorting", "Greedy", "Recursion", "Bit Manipulation"). Use STANDARD LeetCode tag names only, separated by commas if combining topics. EXAMPLE: "Binary Search, Bit Manipulation" not "Binary Search & Bit Manipulation".
 
 Aim for 4-12 weeks total depending on the user's experience and goals.`
+}
 
+export async function generateRoadmap(preferences: UserPreferences): Promise<RoadmapWeek[]> {
+  const prompt = buildPrompt(preferences)
   const text = extractJson(await provider.generate({ prompt, temperature: 0.7, jsonMode: true }))
-
   try {
     const parsed = JSON.parse(text)
     return Array.isArray(parsed) ? parsed : parsed.weeks || parsed.roadmap || []
   } catch {
     throw new Error("Failed to parse roadmap from AI response")
   }
+}
+
+export async function processRoadmapJob(jobId: string): Promise<void> {
+  const job = await db.query.roadmapJob.findFirst({ where: eq(roadmapJob.id, jobId) })
+  if (!job) return
+
+  await db.update(roadmapJob).set({ status: "processing", updatedAt: new Date() }).where(eq(roadmapJob.id, jobId))
+
+  const prefs = await db.query.userPreferences.findFirst({ where: eq(userPreferences.userId, job.userId) })
+  if (!prefs) {
+    await db.update(roadmapJob).set({ status: "error", error: "Complete onboarding first", updatedAt: new Date() }).where(eq(roadmapJob.id, jobId))
+    return
+  }
+
+  const prompt = buildPrompt({
+    experienceLevel: prefs.experienceLevel,
+    goals: prefs.goals,
+    weakTopics: prefs.weakTopics,
+    targetCompanies: prefs.targetCompanies,
+    hoursPerWeek: prefs.hoursPerWeek,
+    targetDate: prefs.targetDate?.toISOString(),
+  })
+
+  let fullText = ""
+  try {
+    for await (const chunk of provider.generateStream({ prompt, temperature: 0.7 })) {
+      fullText += chunk
+      await db.update(roadmapJob).set({ progress: fullText, updatedAt: new Date() }).where(eq(roadmapJob.id, jobId))
+    }
+
+    const cleaned = extractJson(fullText)
+    let parsed: any
+    try {
+      parsed = JSON.parse(cleaned)
+    } catch {
+      await db.update(roadmapJob).set({ status: "error", error: "Failed to parse roadmap from AI response", updatedAt: new Date() }).where(eq(roadmapJob.id, jobId))
+      return
+    }
+
+    const weeks = Array.isArray(parsed) ? parsed : parsed.weeks || parsed.roadmap || []
+
+    await db.insert(roadmapPlan).values({
+      id: crypto.randomUUID(),
+      userId: job.userId,
+      weeks: JSON.parse(JSON.stringify(weeks)),
+      currentWeek: 1,
+    }).onConflictDoUpdate({
+      target: roadmapPlan.userId,
+      set: { weeks: JSON.parse(JSON.stringify(weeks)), currentWeek: 1, updatedAt: new Date() },
+    })
+
+    await db.update(roadmapJob).set({
+      status: "done",
+      result: JSON.parse(JSON.stringify(weeks)),
+      progress: fullText,
+      updatedAt: new Date(),
+    }).where(eq(roadmapJob.id, jobId))
+  } catch (err: any) {
+    await db.update(roadmapJob).set({
+      status: "error",
+      error: err.message || "Unknown error",
+      updatedAt: new Date(),
+    }).where(eq(roadmapJob.id, jobId))
+  }
+}
+
+export function startJobProcessing(jobId: string): void {
+  processRoadmapJob(jobId).catch((err) => console.error("Roadmap job failed:", err))
 }
 
 interface LeetCodeProblem {

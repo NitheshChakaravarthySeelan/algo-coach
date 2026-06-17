@@ -1,12 +1,27 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { db } from '../db'
-import { userPreferences, roadmapPlan, dailyPlan, dailyProgress } from '../db/schema'
+import { userPreferences, roadmapPlan, dailyPlan, dailyProgress, roadmapJob } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
-import { eq, and, gte, desc, lte, inArray } from 'drizzle-orm'
-import { selectDailyProblems } from '../services/ai'
-import { createProvider, extractJson } from '../services/ai-provider'
-import { searchLeetCodeProblems } from '../services/leetcode-search'
+import { eq, and, gte, desc } from 'drizzle-orm'
+import { selectDailyProblems, startJobProcessing } from '../services/ai'
+
+function tryParseError(msg: string): string {
+  try {
+    const top = JSON.parse(msg)
+    const inner = top.error?.message || top.message || msg
+    if (typeof inner === 'string') {
+      try {
+        return JSON.parse(inner).error?.message || inner
+      } catch {
+        return inner
+      }
+    }
+    return String(inner)
+  } catch {
+    return msg
+  }
+}
 
 const app = new Hono<{ Variables: { userId: string } }>()
 app.use('/*', authMiddleware)
@@ -68,9 +83,7 @@ app.post('/roadmap/generate', async (c) => {
   const force = c.req.query('force') === 'true'
   const existingWeeks = Array.isArray(planRecord.weeks) ? planRecord.weeks : []
   if (existingWeeks.length > 0 && !force) {
-    return streamSSE(c, async (stream) => {
-      await stream.writeSSE({ data: JSON.stringify({ type: "done", data: { ...planRecord, ready: true } }) })
-    })
+    return c.json({ success: true, data: { ...planRecord, ready: true } })
   }
 
   const prefs = await db.query.userPreferences.findFirst({
@@ -80,73 +93,100 @@ app.post('/roadmap/generate', async (c) => {
     return c.json({ success: false, error: 'Complete onboarding first' }, 400)
   }
 
+  const jobId = crypto.randomUUID()
+  await db.insert(roadmapJob).values({
+    id: jobId,
+    userId,
+    status: "pending",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+
+  startJobProcessing(jobId)
+
+  return c.json({ success: true, data: { jobId } })
+})
+
+app.get('/roadmap/jobs/:jobId', async (c) => {
+  const userId = c.get('userId')
+  const { jobId } = c.req.param()
+
+  const job = await db.query.roadmapJob.findFirst({
+    where: and(eq(roadmapJob.id, jobId), eq(roadmapJob.userId, userId)),
+  })
+  if (!job) return c.json({ success: false, error: 'Job not found' }, 404)
+
+  return c.json({ success: true, data: job })
+})
+
+app.get('/roadmap/jobs/:jobId/stream', async (c) => {
+  const userId = c.get('userId')
+  const { jobId } = c.req.param()
+
+  const job = await db.query.roadmapJob.findFirst({
+    where: and(eq(roadmapJob.id, jobId), eq(roadmapJob.userId, userId)),
+  })
+  if (!job) return c.json({ success: false, error: 'Job not found' }, 404)
+
+  if (job.status === "pending") {
+    startJobProcessing(jobId)
+  }
+
   return streamSSE(c, async (stream) => {
-    const prompt = `You are a LeetCode coach creating a personalized study roadmap.
+    let lastProgress = job.progress || ""
+    let lastStatus = job.status
 
-User Profile:
-- Experience: ${prefs.experienceLevel}
-- Goals: ${prefs.goals.join(", ")}
-- Weak topics: ${prefs.weakTopics.join(", ")}
-- Target companies: ${prefs.targetCompanies?.join(", ") || "Not specified"}
-- Hours per week: ${prefs.hoursPerWeek}
-- Target date: ${prefs.targetDate || "No deadline"}
+    if (lastProgress) {
+      await stream.writeSSE({ data: JSON.stringify({ type: "token", text: lastProgress }) })
+    }
 
-Create a structured weekly roadmap that:
-1. Starts with fundamentals and progresses to advanced topics
-2. Prioritizes the user's weak topics
-3. Allocates more weeks to harder topics
-4. Is realistic given their hours per week
+    while (lastStatus === "pending" || lastStatus === "processing") {
+      await Bun.sleep(500)
 
-Return a JSON array where each entry has: week (number), topic (string), description (string), problemsCount (number).
+      const current = await db.query.roadmapJob.findFirst({
+        where: and(eq(roadmapJob.id, jobId), eq(roadmapJob.userId, userId)),
+      })
+      if (!current) break
 
-IMPORTANT: Each topic MUST be a valid LeetCode problem tag name (e.g., "Arrays", "Strings", "Hash Table", "Dynamic Programming", "Linked List", "Binary Search", "Trees", "Graph", "Heap", "Backtracking", "Sliding Window", "Two Pointers", "Stack", "Queue", "Math", "Sorting", "Greedy", "Recursion", "Bit Manipulation"). Use STANDARD LeetCode tag names only, separated by commas if combining topics. EXAMPLE: "Binary Search, Bit Manipulation" not "Binary Search & Bit Manipulation".
-
-Aim for 4-12 weeks total depending on the user's experience and goals.`
-
-    const provider = createProvider()
-    let fullText = ""
-
-    try {
-      for await (const chunk of provider.generateStream({ prompt, temperature: 0.7 })) {
-        fullText += chunk
-        await stream.writeSSE({ data: JSON.stringify({ type: "token", text: chunk }) })
+      const newProgress = current.progress || ""
+      if (newProgress.length > lastProgress.length && newProgress.startsWith(lastProgress)) {
+        const delta = newProgress.slice(lastProgress.length)
+        lastProgress = newProgress
+        await stream.writeSSE({ data: JSON.stringify({ type: "token", text: delta }) })
+      } else if (newProgress !== lastProgress) {
+        lastProgress = newProgress
+        await stream.writeSSE({ data: JSON.stringify({ type: "token", text: newProgress }) })
       }
 
-      const cleaned = extractJson(fullText)
-      let parsed: any
-      try {
-        parsed = JSON.parse(cleaned)
-      } catch {
-        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "Failed to parse roadmap from AI response" }) })
+      lastStatus = current.status
+      if (lastStatus === "done") {
+        const planRecord = await db.query.roadmapPlan.findFirst({
+          where: eq(roadmapPlan.userId, userId),
+        })
+        await stream.writeSSE({ data: JSON.stringify({ type: "done", data: { ...planRecord, ready: true } }) })
         return
       }
+      if (lastStatus === "error") {
+        const msg = current.error || "Unknown error"
+        const parsed = tryParseError(msg)
+        if (parsed.includes("API_KEY") || parsed.includes("API key")) {
+          await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "Invalid or missing AI API key. Check your GEMINI_API_KEY, GROQ_API_KEY, or NVIDIA_API_KEY." }) })
+        } else if (parsed.includes("429") || parsed.includes("quota") || parsed.includes("Too Many Requests") || parsed.includes("RATE_LIMIT")) {
+          await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "AI quota reached. Please try again in a minute.", retryAfter: 60 }) })
+        } else if (parsed.includes("500") || parsed.includes("INTERNAL") || parsed.includes("Internal error") || parsed.includes("internalError") || parsed.includes("internalServerError")) {
+          await stream.writeSSE({ data: JSON.stringify({ type: "error", message: `AI provider returned an error: ${parsed}. The model may be unavailable. Try setting AI_PROVIDER=groq, AI_PROVIDER=nvidia, or a different AI_MODEL.` }) })
+        } else {
+          await stream.writeSSE({ data: JSON.stringify({ type: "error", message: parsed }) })
+        }
+        return
+      }
+    }
 
-      const weeks = Array.isArray(parsed) ? parsed : parsed.weeks || parsed.roadmap || []
-
-      await db.update(roadmapPlan).set({
-        weeks: JSON.parse(JSON.stringify(weeks)),
-        currentWeek: 1,
-        updatedAt: new Date(),
-      }).where(eq(roadmapPlan.userId, userId))
-
-      const updated = await db.query.roadmapPlan.findFirst({
+    if (lastStatus === "done") {
+      const planRecord = await db.query.roadmapPlan.findFirst({
         where: eq(roadmapPlan.userId, userId),
       })
-
-      await stream.writeSSE({ data: JSON.stringify({ type: "done", data: { ...updated, ready: true } }) })
-    } catch (err: any) {
-      const msg = err.message || ""
-      let inner: string
-      try { inner = JSON.parse(JSON.parse(msg).error?.message || msg).error?.message || msg } catch { inner = msg }
-      if (inner.includes("API_KEY") || inner.includes("API key")) {
-        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "Invalid or missing AI API key. Check your GEMINI_API_KEY or GROQ_API_KEY." }) })
-      } else if (inner.includes("429") || inner.includes("quota") || inner.includes("Too Many Requests") || inner.includes("RATE_LIMIT")) {
-        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "AI quota reached. Please try again in a minute.", retryAfter: 60 }) })
-      } else if (inner.includes("500") || inner.includes("INTERNAL") || inner.includes("Internal error")) {
-        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: "AI provider returned an error. The model may be unavailable. Try setting AI_PROVIDER=groq or a different AI_MODEL." }) })
-      } else {
-        await stream.writeSSE({ data: JSON.stringify({ type: "error", message: inner }) })
-      }
+      await stream.writeSSE({ data: JSON.stringify({ type: "done", data: { ...planRecord, ready: true } }) })
     }
   })
 })
