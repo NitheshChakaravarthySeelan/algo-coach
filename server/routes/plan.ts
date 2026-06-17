@@ -472,10 +472,13 @@ app.post('/today/:planId/regenerate', async (c) => {
         progress: progress.map((p) => ({ problemId: p.problemId, status: p.status })),
         dedupCount,
         solvedSlugs,
-        count: existingProblems.length,
+        count: 3,
         difficultyFilter: "MIXED",
-        excludeSlugs: [],
+        excludeSlugs: currentPlanSlugs,
       })
+      if (!result.problems.length) {
+        return c.json({ success: false, error: 'No alternative problems found. Try a different topic or adjust your difficulty filter.' }, 400)
+      }
       const newProblems = result.problems.map((p) => ({ ...p, status: "PENDING", completedAt: null }))
       existingProblems.length = 0
       existingProblems.push(...newProblems)

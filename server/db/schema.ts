@@ -65,7 +65,7 @@ export const surveyResponse = sqliteTable("survey_response", {
 
 export const leetcodeAccount = sqliteTable("leetcode_account", {
   id: text("id").primaryKey(),
-  userId: text("user_id").references(() => user.id),
+  userId: text("user_id").unique().references(() => user.id),
   leetcodeUsername: text("leetcode_username").notNull(),
   totalSolved: integer("total_solved").notNull().default(0),
   easySolved: integer("easy_solved").notNull().default(0),
@@ -101,7 +101,7 @@ export const userPreferences = sqliteTable("user_preferences", {
 
 export const roadmapPlan = sqliteTable("roadmap_plan", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => user.id),
+  userId: text("user_id").notNull().unique().references(() => user.id),
   weeks: jsonText<{ week: number; topic: string; description: string; problemsCount: number }[]>()("weeks").notNull(),
   currentWeek: integer("current_week").notNull().default(1),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),

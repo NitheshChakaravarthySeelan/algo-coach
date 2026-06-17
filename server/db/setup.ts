@@ -68,7 +68,7 @@ export function createTables(db: Database) {
   db.run(`
     CREATE TABLE IF NOT EXISTS "leetcode_account" (
       "id" text PRIMARY KEY NOT NULL,
-      "user_id" text REFERENCES "user"("id"),
+      "user_id" text UNIQUE REFERENCES "user"("id"),
       "leetcode_username" text NOT NULL,
       "total_solved" integer NOT NULL DEFAULT 0,
       "easy_solved" integer NOT NULL DEFAULT 0,
@@ -107,7 +107,7 @@ export function createTables(db: Database) {
   db.run(`
     CREATE TABLE IF NOT EXISTS "roadmap_plan" (
       "id" text PRIMARY KEY NOT NULL,
-      "user_id" text NOT NULL REFERENCES "user"("id"),
+      "user_id" text NOT NULL UNIQUE REFERENCES "user"("id"),
       "weeks" text NOT NULL,
       "current_week" integer NOT NULL DEFAULT 1,
       "created_at" integer NOT NULL,
@@ -137,4 +137,8 @@ export function createTables(db: Database) {
       "updated_at" integer NOT NULL
     )
   `)
+
+  // Add unique indexes for tables that might already exist without them
+  db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_leetcode_account_user_id ON leetcode_account(user_id)")
+  db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_roadmap_plan_user_id ON roadmap_plan(user_id)")
 }

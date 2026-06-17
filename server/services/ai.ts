@@ -97,15 +97,12 @@ export async function processRoadmapJob(jobId: string): Promise<void> {
 
     const weeks = Array.isArray(parsed) ? parsed : parsed.weeks || parsed.roadmap || []
 
-    await db.insert(roadmapPlan).values({
-      id: crypto.randomUUID(),
-      userId: job.userId,
-      weeks,
-      currentWeek: 1,
-    }).onConflictDoUpdate({
-      target: roadmapPlan.userId,
-      set: { weeks, currentWeek: 1, updatedAt: new Date() },
-    })
+    const existing = await db.query.roadmapPlan.findFirst({ where: eq(roadmapPlan.userId, job.userId) })
+    if (existing) {
+      await db.update(roadmapPlan).set({ weeks, currentWeek: 1, updatedAt: new Date() }).where(eq(roadmapPlan.userId, job.userId))
+    } else {
+      await db.insert(roadmapPlan).values({ id: crypto.randomUUID(), userId: job.userId, weeks, currentWeek: 1 })
+    }
 
     await db.update(roadmapJob).set({
       status: "done",
@@ -247,9 +244,125 @@ export async function selectDailyProblems(params: {
   }
 }
 
+const TOPIC_ALIASES: Record<string, string> = {
+  "array": "array",
+  "arrays": "array",
+  "hashing": "hash-table",
+  "hash table": "hash-table",
+  "hash tables": "hash-table",
+  "hashmap": "hash-table",
+  "hash map": "hash-table",
+  "hash maps": "hash-table",
+  "string": "string",
+  "strings": "string",
+  "two pointer": "two-pointers",
+  "two pointers": "two-pointers",
+  "sliding window": "sliding-window",
+  "binary search": "binary-search",
+  "sorting": "sorting",
+  "sort": "sorting",
+  "recursion": "recursion",
+  "recursive": "recursion",
+  "backtracking": "backtracking",
+  "stack": "stack",
+  "queue": "queue",
+  "linked list": "linked-list",
+  "linked lists": "linked-list",
+  "linkedlist": "linked-list",
+  "tree": "binary-tree",
+  "trees": "binary-tree",
+  "binary tree": "binary-tree",
+  "binary trees": "binary-tree",
+  "bst": "binary-search-tree",
+  "binary search tree": "binary-search-tree",
+  "heap": "heap-priority-queue",
+  "heaps": "heap-priority-queue",
+  "priority queue": "heap-priority-queue",
+  "graph": "graph",
+  "graphs": "graph",
+  "dynamic programming": "dynamic-programming",
+  "dp": "dynamic-programming",
+  "greedy": "greedy",
+  "bit manipulation": "bit-manipulation",
+  "bit": "bit-manipulation",
+  "trie": "trie",
+  "prefix tree": "trie",
+  "union find": "union-find",
+  "disjoint set": "union-find",
+  "divide and conquer": "divide-and-conquer",
+  "segment tree": "segment-tree",
+  "fenwick tree": "fenwick-tree",
+  "binary indexed tree": "fenwick-tree",
+  "bit (fenwick)": "fenwick-tree",
+  "topological sort": "topological-sort",
+  "topological": "topological-sort",
+  "monotonic stack": "monotonic-stack",
+  "monotonic queue": "monotonic-queue",
+  "prefix sum": "prefix-sum",
+  "prefix sums": "prefix-sum",
+  "counting": "counting",
+  "memoization": "memoization",
+  "memo": "memoization",
+  "matrix": "matrix",
+  "matrices": "matrix",
+  "math": "math",
+  "mathematics": "math",
+  "number theory": "math",
+  "geometry": "geometry",
+  "simulation": "simulation",
+  "design": "design",
+  "data stream": "data-stream",
+  "iterator": "iterator",
+  "string matching": "string-matching",
+  "kmp": "string-matching",
+  "rabin-karp": "string-matching",
+  "rolling hash": "rolling-hash",
+  "suffix array": "suffix-array",
+  "shortest path": "shortest-path",
+  "dijkstra": "shortest-path",
+  "bellman-ford": "shortest-path",
+  "mst": "minimum-spanning-tree",
+  "minimum spanning tree": "minimum-spanning-tree",
+  "scc": "strongly-connected-component",
+  "strongly connected component": "strongly-connected-component",
+  "articulation point": "articulation-point",
+  "game theory": "game-theory",
+  "combinatorics": "combinatorics",
+  "quickselect": "quickselect",
+  "bucket sort": "bucket-sort",
+  "counting sort": "counting-sort",
+  "radix sort": "radix-sort",
+  "line sweep": "line-sweep",
+  "merge sort": "merge-sort",
+  "ordered set": "ordered-set",
+  "ordered map": "ordered-map",
+  "doubly-linked list": "doubly-linked-list",
+  "circular linked list": "circular-linked-list",
+  "circular array": "circular-array",
+  "brainteaser": "brainteaser",
+  "reservoir sampling": "reservoir-sampling",
+  "rejection sampling": "rejection-sampling",
+  "probability": "probability-and-statistics",
+  "statistics": "probability-and-statistics",
+  "database": "database",
+  "sql": "sql",
+  "shell": "shell",
+  "json": "json",
+  "concurrency": "concurrency",
+}
+
 function parseTopicToSlugs(topic: string): string[] {
   const parts = topic.split(/[,&/]/).map((s) => s.trim()).filter(Boolean)
-  return parts.map((p) =>
-    p.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-  )
+  const slugs = new Set<string>()
+  for (const part of parts) {
+    const normalized = part.toLowerCase().replace(/[^a-z0-9\s-]+/g, "").trim()
+    const mapped = TOPIC_ALIASES[normalized]
+    if (mapped) {
+      slugs.add(mapped)
+    } else {
+      const slug = normalized.replace(/\s+/g, "-").replace(/^-|-$/g, "")
+      if (slug) slugs.add(slug)
+    }
+  }
+  return [...slugs]
 }

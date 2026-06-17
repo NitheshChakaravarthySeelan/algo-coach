@@ -1,9 +1,9 @@
 {
-  "name": "leetcode-tracker",
+  "name": "algocoach",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "leetcode-tracker": "cli/index.ts"
+    "algocoach": "cli/index.ts"
   },
   "files": [
     "cli/",
@@ -36,7 +36,6 @@
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.17.0",
     "recharts": "^3.8.1",
-    "resend": "^6.12.4",
     "tailwindcss": "3",
     "zod": "^4.4.3"
   },

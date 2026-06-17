@@ -25,7 +25,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# SQLite database (created in ~/.leetcode-tracker/)
+# SQLite database (created in ~/.algocoach/)
 *.db
 *.db-shm
 *.db-wal

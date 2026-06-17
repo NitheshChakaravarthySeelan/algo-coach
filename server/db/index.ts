@@ -7,7 +7,7 @@ import fs from "fs"
 
 function getDbPath(): string {
   const home = process.env.HOME || process.env.USERPROFILE || "."
-  const dir = path.join(home, ".leetcode-tracker")
+  const dir = path.join(home, ".algocoach")
   fs.mkdirSync(dir, { recursive: true })
   return path.join(dir, "data.db")
 }

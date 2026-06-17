@@ -2,116 +2,96 @@
 import path from "path"
 import fs from "fs"
 
-const CONFIG_DIR = path.join(process.env.HOME || process.env.USERPROFILE || ".", ".leetcode-tracker")
-const CONFIG_PATH = path.join(CONFIG_DIR, "config.json")
+const ENV_PATH = path.resolve(".env")
 
-interface Config {
-  aiProvider: string
-  aiModel: string
-  geminiApiKey: string
-  groqApiKey: string
-  nvidiaApiKey: string
-  port: number
+function envTemplate() {
+  return [
+    "# AlgoCoach Configuration",
+    "# Uncomment and fill in at least one AI provider API key.",
+    "",
+    "# AI provider: google, groq, or nvidia",
+    "AI_PROVIDER=google",
+    "",
+    "# API keys (get from https://aistudio.google.com, https://console.groq.com, https://build.nvidia.com)",
+    "# GEMINI_API_KEY=your-key-here",
+    "# GROQ_API_KEY=your-key-here",
+    "# NVIDIA_API_KEY=your-key-here",
+    "",
+    "# Optional overrides",
+    "# AI_MODEL=",
+    "# PORT=3000",
+  ].join("\n") + "\n"
 }
 
-function defaultConfig(): Config {
-  return {
-    aiProvider: "google",
-    aiModel: "",
-    geminiApiKey: "",
-    groqApiKey: "",
-    nvidiaApiKey: "",
-    port: 3000,
-  }
-}
-
-function loadConfig(): Config {
-  try {
-    if (fs.existsSync(CONFIG_PATH)) {
-      return { ...defaultConfig(), ...JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8")) }
-    }
-  } catch { }
-  return defaultConfig()
-}
-
-function saveConfig(config: Config) {
-  fs.mkdirSync(CONFIG_DIR, { recursive: true })
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2))
+function hasAnyKey(): boolean {
+  return !!(process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.NVIDIA_API_KEY)
 }
 
 async function cmdInit() {
-  fs.mkdirSync(CONFIG_DIR, { recursive: true })
-
-  if (!fs.existsSync(CONFIG_PATH)) {
-    saveConfig(defaultConfig())
+  if (!fs.existsSync(ENV_PATH)) {
+    fs.writeFileSync(ENV_PATH, envTemplate())
+    console.log(`Created ${ENV_PATH}`)
+  } else {
+    console.log(`${ENV_PATH} already exists`)
   }
 
   console.log(`
-LeetCode Tracker - Configuration
-================================
-
-Configuration directory: ${CONFIG_DIR}
-Config file: ${CONFIG_PATH}
-
-Please edit the config file and set at least one AI provider API key.
+Edit .env to set at least one AI provider API key.
 You can get API keys from:
   - Google Gemini: https://aistudio.google.com
   - Groq: https://console.groq.com
   - NVIDIA NIM: https://build.nvidia.com
 
-Then run: leetcode-tracker serve
+Then run: algocoach start
 `)
 }
 
-async function cmdServe() {
-  const config = loadConfig()
+async function cmdStart() {
+  if (!fs.existsSync(ENV_PATH)) {
+    console.log("No .env found. Creating one...")
+    fs.writeFileSync(ENV_PATH, envTemplate())
+    console.log(`Created ${ENV_PATH}`)
+    console.log("Edit it with your API keys, then run 'algocoach start' again.\n")
+    return
+  }
 
-  const hasKey = config.geminiApiKey || config.groqApiKey || config.nvidiaApiKey
-  if (!hasKey) {
-    console.error("No AI API key configured. Run 'leetcode-tracker init' first.")
+  if (!hasAnyKey()) {
+    console.error("No AI API key configured in .env. Add at least one key and try again.")
     process.exit(1)
   }
 
-  const envVars: Record<string, string> = {
-    LOCAL_DEV: "true",
-    LOCAL_USER_ID: "local-user",
-    AI_PROVIDER: config.aiProvider,
-    AI_MODEL: config.aiModel,
-    GEMINI_API_KEY: config.geminiApiKey,
-    GROQ_API_KEY: config.groqApiKey,
-    NVIDIA_API_KEY: config.nvidiaApiKey,
-    PORT: String(config.port),
-    BETTER_AUTH_URL: `http://localhost:${config.port}`,
-    BETTER_AUTH_SECRET: "local-dev-secret-min-32-chars-long-for-better-auth",
-    CORS_ORIGIN: `http://localhost:${config.port}`,
-  }
+  const port = parseInt(process.env.PORT || "3000", 10)
 
-  for (const [key, val] of Object.entries(envVars)) {
-    process.env[key] = val
-  }
+  process.env.LOCAL_DEV = "true"
+  process.env.LOCAL_USER_ID = "local-user"
+  process.env.BETTER_AUTH_URL = `http://localhost:${port}`
+  process.env.BETTER_AUTH_SECRET = "local-dev-secret-min-32-chars-long-for-better-auth"
+  process.env.CORS_ORIGIN = `http://localhost:${port}`
 
   const { serve } = await import("../server/index")
-  serve(config.port)
+  serve(port)
 
-  console.log(`\n  LeetCode Tracker running at http://localhost:${config.port}\n`)
+  console.log(`\n  AlgoCoach running at http://localhost:${port}\n`)
 }
 
-const cmd = process.argv[2] || "serve"
+const cmd = process.argv[2] || "start"
 
 switch (cmd) {
   case "init":
     await cmdInit()
     break
+  case "start":
   case "serve":
-    await cmdServe()
+    await cmdStart()
     break
   default:
     console.log(`
-Usage: leetcode-tracker <command>
+Usage: algocoach <command>
 
 Commands:
-  init    Create configuration and initialize database
-  serve   Start the LeetCode Tracker server
-  help    Show this help message
+  start   Create .env if needed and start the server
+  init    Create .env in current directory
+
+Run 'algocoach start' to get started.
 `)
 }
