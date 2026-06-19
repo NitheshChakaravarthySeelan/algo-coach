@@ -1,101 +1,206 @@
-# AlgoCoach
+# AlgoCoach 🎯
 
-AI-powered LeetCode study planner that creates personalized roadmaps, daily problem sets, and tracks your progress.
+<p align="center">
+  <img src="https://img.shields.io/npm/v/algocoach" alt="npm version">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
+  <img src="https://img.shields.io/badge/runtime-Bun-%23f9f9f9" alt="bun">
+  <img src="https://img.shields.io/badge/AI-Google%20|%20Groq%20|%20NVIDIA-orange" alt="AI providers">
+</p>
 
-## Prerequisites
+<p align="center">
+  <b>AI-powered LeetCode study planner</b><br>
+  Personalized roadmaps, daily problem sets, progress tracking — all local, all private.
+</p>
 
-- [Bun](https://bun.sh) >= 1.3
-- An AI provider API key (Google Gemini, Groq, or NVIDIA NIM)
+<br>
 
-## Quick Start
+<p align="center">
+  <kbd>
+    <img src="screenshots/dashboard.png" alt="AlgoCoach Dashboard" width="700">
+  </kbd>
+</p>
+
+<p align="center">
+  <em>Dashboard showing today's plan, roadmap progress, and LeetCode stats</em>
+</p>
+
+---
+
+## ✨ Features
+
+| | Feature | Description |
+|---|---|---|
+| 🗺️ | **AI Roadmap** | Personalized multi-week study plan based on your skill level and goals |
+| 📅 | **Daily Plans** | 3 curated problems (Easy + Medium + Hard) every day — never wonder what to solve |
+| 🔄 | **Auto-refresh** | Stuck on a problem? Replace it with an easier one or regenerate the whole set |
+| 📊 | **Progress Tracking** | Solved/tried/skipped counts, streaks, and topic-level progress |
+| 🔗 | **LeetCode Sync** | Link your LeetCode account to auto-fetch your stats |
+| 🔒 | **100% Local** | Database stored at `~/.algocoach/data.db`. No cloud, no signup, no data leaks |
+| 🚀 | **AI Anywhere** | Works with Google Gemini, Groq, or NVIDIA NIM |
+
+---
+
+## 🚀 Quick Start
 
 ```bash
-# Install globally
+# Install (requires Bun)
 npm install -g algocoach
 
-# Start (creates .env if missing)
+# Start — creates config, opens browser
 algocoach start
-
-# Open http://localhost:3000
 ```
 
-## Setup
+<p align="center">
+  <img src="screenshots/cli-demo.gif" alt="CLI Demo" width="600">
+</p>
 
-1. Run `algocoach start` — creates `~/.algocoach/.env`
-2. Edit `~/.algocoach/.env` — uncomment and set at least one API key:
+---
+
+## 🖥️ Screenshots
+
+<p align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="screenshots/onboard.png" alt="Onboarding" width="350"><br>
+        <em>Skill survey</em>
+      </td>
+      <td align="center">
+        <img src="screenshots/roadmap.png" alt="Roadmap" width="350"><br>
+        <em>AI-generated roadmap</em>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="screenshots/daily-plan.png" alt="Daily Plan" width="350"><br>
+        <em>Today's problems</em>
+      </td>
+      <td align="center">
+        <img src="screenshots/stats.png" alt="Stats" width="350"><br>
+        <em>Progress & streaks</em>
+      </td>
+    </tr>
+  </table>
+</p>
+
+---
+
+## 📖 Usage
+
+### First Time
+
+```bash
+algocoach start
+```
+
+This creates `~/.algocoach/.env`. Edit it to set your AI provider API key:
 
 ```env
 AI_PROVIDER=google
-GEMINI_API_KEY=your-key-here
+GEMINI_API_KEY=AIza...
 ```
 
-3. Run `algocoach start` again — starts the server
-
-### Get an API Key
-
-| Provider | Get Key |
-|----------|---------|
-| Google Gemini | https://aistudio.google.com |
-| Groq | https://console.groq.com |
-| NVIDIA NIM | https://build.nvidia.com |
-
-## Usage
-
-1. **Onboard** — Tell AlgoCoach your skill level, goals, and weak topics
-2. **Link LeetCode** — Enter your LeetCode username to auto-sync stats
-3. **Generate Roadmap** — AI creates a personalized multi-week study plan
-4. **Daily Plan** — Get 3 curated problems (Easy + Medium + Hard) each day
-5. **Track Progress** — Mark problems solved/tried/skipped, view streaks
+Then run `algocoach start` again.
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `algocoach start` | Create .env if missing and start server (default) |
-| `algocoach init` | Create .env only |
-| `algocoach serve` | Start server (alias for `start`) |
+```bash
+algocoach start    # Create config if needed + start server + open browser
+algocoach init     # Only create config file
+```
 
-## Development
+### Daily Workflow
+
+```
+1. Open http://localhost:3000
+2. Complete the onboarding survey
+3. Link your LeetCode username
+4. Generate a roadmap (AI creates a study plan)
+5. Open "Today's Plan" → solve 3 curated problems
+6. Track progress daily
+```
+
+### Regenerating Problems
+
+- **Per problem**: Click the ↻ icon next to any problem to replace it
+- **All problems**: Click "Regenerate" to get 3 entirely new problems
+- **Stuck?**: Click "I'm stuck" on a tried problem to get an easier one
+
+---
+
+## ⚙️ Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `AI_PROVIDER` | `google` | `google`, `groq`, or `nvidia` |
+| `GEMINI_API_KEY` | — | Google Gemini API key |
+| `GROQ_API_KEY` | — | Groq API key |
+| `NVIDIA_API_KEY` | — | NVIDIA NIM API key |
+| `AI_MODEL` | (provider default) | Override the AI model |
+| `PORT` | `3000` | Server port (auto-fallsback if busy) |
+
+Config file: `~/.algocoach/.env`
+
+### Get an API Key
+
+| Provider | Get Key | Free Tier |
+|---|---|---|
+| **Google Gemini** | [aistudio.google.com](https://aistudio.google.com) | ✅ Yes |
+| **Groq** | [console.groq.com](https://console.groq.com) | ✅ Yes (fast!) |
+| **NVIDIA NIM** | [build.nvidia.com](https://build.nvidia.com) | ✅ Yes |
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│               algocoach CLI                  │
+│  start / init / serve                        │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│            Hono HTTP Server                  │
+│  API routes  +  Static frontend (dist/)      │
+└───────┬─────────────────────┬───────────────┘
+        │                     │
+┌───────▼───────┐   ┌────────▼────────┐
+│  SQLite DB     │   │  AI Providers   │
+│  ~/.algocoach/ │   │  Google / Groq  │
+│  data.db       │   │  / NVIDIA       │
+└───────────────┘   └─────────────────┘
+```
+
+**Stack**: Bun + Hono + React + Tailwind + Drizzle ORM + SQLite + Better Auth
+
+### Data
+
+- **Database**: `~/.algocoach/data.db` — persists across restarts, never sent anywhere
+- **Config**: `~/.algocoach/.env` — API keys stay on your machine
+- **No telemetry, no cloud, no signup**
+
+---
+
+## 🧪 Development
 
 ```bash
-git clone https://github.com/yourusername/algocoach
-cd algocoach
+git clone https://github.com/NitheshChakaravarthySeelan/algo-coach
+cd algo-coach
 bun install
-bun run build       # Build frontend
-bun run dev         # Dev mode with hot reload (Vite :5173 + server :3000)
-bun test            # Run tests
+bun run dev       # Dev mode (hot reload)
+bun run build     # Production build
+bun test          # Run tests
 ```
 
-## Architecture
+---
 
-```
-cli/index.ts        — CLI entry point (algocoach start/serve/init)
-server/
-  index.ts          — Hono HTTP server, static file serving
-  db/
-    schema.ts       — Drizzle SQLite schema (11 tables)
-    setup.ts        — CREATE TABLE SQL
-    index.ts        — bun:sqlite connection at ~/.algocoach/data.db
-  auth/index.ts     — Better Auth with local-dev bypass
-  routes/           — API route handlers (plan, leetcode, onboard, survey)
-  services/
-    ai.ts           — AI provider wrapper + roadmap/daily-plan generation
-    ai-provider.ts  — Google, Groq, NVIDIA provider implementations
-    leetcode-search.ts — LeetCode GraphQL search
-src/                — React frontend (Vite + Tailwind)
-```
+## 📄 License
 
-## Data
+MIT
 
-- **Database**: `~/.algocoach/data.db` — SQLite, created on first use
-- **Config**: `~/.algocoach/.env` — API keys and settings
+---
 
-## AI Providers
-
-AlgoCoach supports three AI backends for roadmap generation and daily plan selection:
-
-- **Google Gemini** (default) — uses `@google/genai` SDK
-- **Groq** — uses `groq-sdk` for fast inference
-- **NVIDIA NIM** — uses `openai` SDK with NVIDIA's OpenAI-compatible API
-
-Set `AI_PROVIDER=groq` or `AI_PROVIDER=nvidia` in `.env` to switch.
+<p align="center">
+  Made by <a href="https://github.com/NitheshChakaravarthySeelan">NitheshChakaravarthySeelan</a><br>
+  <sub>Built with Bun, React, and a lot of AI tokens</sub>
+</p>
