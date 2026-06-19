@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/npm/v/algocoach" alt="npm version">
-  <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
+  <img src="https://img.shields.io/badge/license-AGPLv3-blue" alt="license">
   <img src="https://img.shields.io/badge/runtime-Bun-%23f9f9f9" alt="bun">
   <img src="https://img.shields.io/badge/AI-Google%20|%20Groq%20|%20NVIDIA-orange" alt="AI providers">
 </p>
@@ -196,7 +196,9 @@ bun test          # Run tests
 
 ## 📄 License
 
-MIT
+GNU Affero General Public License v3 (AGPL-3.0)
+
+You're free to fork, modify, and use it personally. If you distribute or run a modified version as a service, you **must** release your source code as well. This prevents anyone from making a proprietary closed-source version of AlgoCoach.
 
 ---
 
