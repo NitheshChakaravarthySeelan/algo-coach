@@ -1,8 +1,8 @@
 
-import { getDb } from "../db"
-import { userPreferences, roadmapPlan } from "../db/schema"
+import { getDb } from "../server/db"
+import { userPreferences, roadmapPlan } from "../server/db/schema"
 import { eq } from "drizzle-orm"
-import { createProvider, extractJson } from "../services/ai-provider"
+import { createProvider, extractJson } from "../server/services/ai-provider"
 
 const USER_ID = process.env.LOCAL_USER_ID || "dev-user-id"
 

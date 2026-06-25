@@ -151,7 +151,7 @@
 
 ### 7.1 LOW Dead file: `server/local-dev/test-ai.ts`
 - **Files:** `server/local-dev/test-ai.ts`
-- **Problem:** Test script with console.log in production source tree.
+- **Status:** ✅ Fixed — moved to `scripts/test-ai.ts`, out of the production source tree
 
 ### 7.2 LOW Jest types dependency may be unused
 - **Files:** `package.json` devDependencies
