@@ -12,6 +12,11 @@ import fs from 'fs'
 
 const app = new Hono()
 
+app.onError((err, c) => {
+  console.error(err)
+  return c.json({ success: false, error: err.message || 'Internal server error' }, 500)
+})
+
 const productionUrl = process.env.BETTER_AUTH_URL || ''
 
 app.use('/*', cors({

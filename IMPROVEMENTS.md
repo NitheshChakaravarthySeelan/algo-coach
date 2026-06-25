@@ -115,7 +115,7 @@
 
 ### 5.5 MEDIUM ~15 repeated try/catch error handlers — no global error middleware
 - **Files:** `server/routes/plan.ts` (every route)
-- **Problem:** Every route repeats `try { ... } catch (err) { return c.json({ success: false, error: err.message }, 500) }`.
+- **Status:** ✅ Fixed — added `app.onError()` global handler in `server/index.ts` as safety net for uncaught errors
 
 ### 5.6 LOW Empty plan when difficulty filter eliminates all AI results
 - **Files:** `server/services/ai.ts:186-193`
