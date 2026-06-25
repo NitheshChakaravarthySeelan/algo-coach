@@ -14,8 +14,7 @@
 
 ### 1.3 CRITICAL Streak ignores manually logged problems
 - **Files:** `server/routes/plan.ts:510-519`
-- **Problem:** `GET /streak` only examines `dailyPlan` records. Problems logged via the "Log Problem" modal (stored in `dailyProgress`) are never consulted.
-- **Impact:** Streak counter is unreliable for users who use manual logging.
+- **Status:** ✅ Fixed — `GET /streak` now queries both `dailyPlan` and `dailyProgress` tables for SOLVED entries
 - **Fix:** Merge solved dates from both `dailyPlan` (problems with `status === "SOLVED"`) and `dailyProgress` (`status === "SOLVED"`).
 
 ---

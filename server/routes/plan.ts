@@ -519,7 +519,11 @@ app.get('/streak', async (c) => {
       orderBy: [desc(dailyPlan.date)],
     })
 
-    if (!plans.length) {
+    const progressRecords = await db.query.dailyProgress.findMany({
+      where: and(eq(dailyProgress.userId, userId), eq(dailyProgress.status, 'SOLVED')),
+    })
+
+    if (!plans.length && !progressRecords.length) {
       return c.json({ success: true, data: { currentStreak: 0, longestStreak: 0, solvedToday: false } })
     }
 
@@ -533,6 +537,13 @@ app.get('/streak', async (c) => {
       const problems = Array.isArray(plan.problems) ? plan.problems : []
       const hasSolved = problems.some((p: any) => (p as Record<string, unknown>).status === "SOLVED")
       if (hasSolved) solvedDates.add(dateStr)
+    }
+
+    for (const r of progressRecords) {
+      const d = new Date(r.date)
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      solvedDates.add(dateStr)
+      allDates.add(dateStr)
     }
 
     const today = new Date()
