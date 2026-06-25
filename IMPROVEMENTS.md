@@ -55,7 +55,7 @@
 
 ### 3.4 MEDIUM Streak `Math.round` can be imprecise near midnight
 - **Files:** `server/routes/plan.ts:530-558`
-- **Problem:** `Math.round(diffMs / (1000 * 60 * 60 * 24))` — near midnight and DST transitions, can give wrong day difference.
+- **Status:** ✅ Fixed — normalized to UTC midnight via `Date.UTC` and use `Math.floor` for day difference
 - **Fix:** Use `Math.floor` and normalize dates to UTC midnight.
 
 ### 3.5 MEDIUM In-memory rate limiter never evicts entries

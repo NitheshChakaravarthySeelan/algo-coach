@@ -574,8 +574,8 @@ app.get('/streak', async (c) => {
       } else {
         const prev = new Date(sortedDates[i - 1])
         const curr = new Date(sortedDates[i])
-        const diffMs = curr.getTime() - prev.getTime()
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
+        const diffMs = Date.UTC(curr.getFullYear(), curr.getMonth(), curr.getDate()) - Date.UTC(prev.getFullYear(), prev.getMonth(), prev.getDate())
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
         if (diffDays === 1) {
           tempStreak++
         } else {
