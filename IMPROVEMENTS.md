@@ -99,8 +99,7 @@
 
 ### 5.1 HIGH Two database files — runtime vs drizzle mismatch
 - **Files:** `server/db/index.ts:11` (`~/.algocoach/data.db`) vs `drizzle.config.ts:8` (`./data.db`)
-- **Problem:** Migrations run via `drizzle-kit` operate on wrong database.
-- **Fix:** Align drizzle config path with runtime path.
+- **Status:** ✅ Fixed — drizzle config now resolves `~/.algocoach/data.db` via `os.homedir()`
 
 ### 5.2 MEDIUM Missing DB indexes on frequently queried columns
 - **Files:** `server/db/setup.ts:82-139`
