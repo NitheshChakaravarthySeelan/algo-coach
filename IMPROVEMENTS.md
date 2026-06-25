@@ -45,7 +45,7 @@
 
 ### 3.2 HIGH Regenerate uses stored week number, not current roadmap week
 - **Files:** `server/routes/plan.ts:455`
-- **Problem:** `POST /today/:planId/regenerate` uses `plan.weekNumber` from the plan's creation time. If a user regenerates an old plan, it uses the old week's topic.
+- **Status:** ✅ Fixed — regenerate now uses `getCurrentWeek()` like POST /today, not the stale `plan.weekNumber`
 - **Fix:** Use roadmap's current `currentWeek` instead, or add a query parameter.
 
 ### 3.3 HIGH `setTimeout` race condition on unmount

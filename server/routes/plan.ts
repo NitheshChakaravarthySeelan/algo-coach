@@ -440,6 +440,7 @@ app.post('/today/:planId/regenerate', async (c) => {
       where: eq(roadmapPlan.userId, userId),
     })
     const roadmap = Array.isArray(planRecord?.weeks) ? planRecord.weeks : []
+    const currentWeek = await getCurrentWeek(userId, roadmap)
 
     const allPlans = await db.query.dailyPlan.findMany({
       where: eq(dailyPlan.userId, userId),
@@ -468,7 +469,7 @@ app.post('/today/:planId/regenerate', async (c) => {
       }
       const result = await selectDailyProblems({
         roadmap,
-        currentWeek: plan.weekNumber,
+        currentWeek,
         progress: progress.map((p) => ({ problemId: p.problemId, status: p.status })),
         dedupCount,
         solvedSlugs,
@@ -484,7 +485,7 @@ app.post('/today/:planId/regenerate', async (c) => {
     } else {
       const result = await selectDailyProblems({
         roadmap,
-        currentWeek: plan.weekNumber,
+        currentWeek,
         progress: progress.map((p) => ({ problemId: p.problemId, status: p.status })),
         dedupCount,
         solvedSlugs,
