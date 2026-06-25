@@ -122,6 +122,7 @@ export function createTables(db: Database) {
       "week_number" integer NOT NULL,
       "topic" text NOT NULL,
       "problems" text NOT NULL,
+      "explanation" text,
       "created_at" integer NOT NULL
     )
   `)

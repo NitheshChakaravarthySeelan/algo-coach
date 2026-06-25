@@ -302,6 +302,9 @@ app.post('/today', async (c) => {
     const roadmap = Array.isArray(planRecord.weeks) ? planRecord.weeks : []
     if (roadmap.length === 0) return c.json({ success: false, error: 'Roadmap is still being generated. Please try again shortly.' }, 400)
     const currentWeek = await getCurrentWeek(userId, roadmap)
+    if (currentWeek > roadmap.length) {
+      return c.json({ success: false, error: 'Roadmap is complete. Generate a new roadmap to continue.' }, 400)
+    }
 
     const allPlans = await db.query.dailyPlan.findMany({
       where: eq(dailyPlan.userId, userId),
@@ -345,11 +348,12 @@ app.post('/today', async (c) => {
       weekNumber: currentWeek,
       topic: (roadmap[currentWeek - 1] as Record<string, unknown>)?.topic as string || '',
       problems,
+      explanation: task.explanation,
     }
 
     await db.insert(dailyPlan).values(entry)
 
-    return c.json({ success: true, data: { ...entry, explanation: task.explanation } }, 201)
+    return c.json({ success: true, data: entry }, 201)
   } catch (err: any) {
     return c.json({ success: false, error: `Failed to generate daily plan: ${err.message}` }, 500)
   }

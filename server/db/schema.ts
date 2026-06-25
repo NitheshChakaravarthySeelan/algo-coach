@@ -115,6 +115,7 @@ export const dailyPlan = sqliteTable("daily_plan", {
   weekNumber: integer("week_number").notNull(),
   topic: text("topic").notNull(),
   problems: jsonText<{ title: string; titleSlug: string; difficulty: string; topicTags: string[]; leetcodeUrl: string; acRate: number; status?: string; completedAt?: string | null }[]>()("problems").notNull(),
+  explanation: text("explanation"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 })
 
