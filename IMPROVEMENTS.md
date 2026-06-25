@@ -131,7 +131,7 @@
 
 ### 6.1 MEDIUM Empty/unmapped topic slugs sent to LeetCode API
 - **Files:** `server/services/ai.ts:354-367`
-- **Problem:** If AI generates an unexpected topic format, `parseTopicToSlugs` may produce empty slugs (`['']`) that get sent to LeetCode API.
+- **Status:** ✅ Fixed — added `.filter(Boolean)` guard on returned slugs to exclude any empty strings
 
 ### 6.2 LOW AI provider selection ignores runtime env changes
 - **Files:** `server/services/ai-provider.ts:141`
