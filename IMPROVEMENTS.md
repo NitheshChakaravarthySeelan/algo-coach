@@ -73,13 +73,11 @@
 
 ### 4.1 MEDIUM No progress bar during long roadmap generation (2-3 min)
 - **Files:** `src/components/dashboard/RoadmapOverview.tsx:64-92`
-- **Problem:** SSE stream shows raw text in a `<pre>` block. No estimated time or progress bar.
-- **Fix:** Add progress percentage or polished loading animation.
+- **Status:** ⏳ Deferred — SSE stream already shows real-time AI output; progress % requires backend changes
 
 ### 4.2 MEDIUM "Generate Today's Plan" has no streaming feedback
 - **Files:** `src/components/dashboard/TodaysPlan.tsx:69-83`
-- **Problem:** Synchronous JSON request blocks for 10-30s during AI selection. Button appears stuck.
-- **Fix:** SSE-based generation for daily plans, or better UI feedback.
+- **Status:** ⏳ Deferred — button already shows spinner; full SSE would require a new endpoint
 
 ### 4.3 MEDIUM Marking problem solved doesn't update streak until refresh
 - **Files:** `src/components/dashboard/TodaysPlan.tsx:85-106`, `src/pages/Dashboard.tsx:43`
@@ -107,7 +105,7 @@
 
 ### 5.3 MEDIUM No social login providers configured
 - **Files:** `server/auth/index.ts:8-14`
-- **Problem:** Auth config has no login methods configured. Only usable with `LOCAL_DEV=true`. Unusable in production.
+- **Status:** ⏳ By design — local CLI tool, always-on LOCAL_DEV mode
 
 ### 5.4 MEDIUM Missing Zod validation on POST/PATCH plan route bodies
 - **Files:** `server/routes/plan.ts:270,350`
@@ -123,7 +121,7 @@
 
 ### 5.7 LOW `processRoadmapJob` fire-and-forget with redundant catch
 - **Files:** `server/services/ai.ts:122-124`
-- **Problem:** `startJobProcessing` calls `.catch(console.error)` but `processRoadmapJob` already handles errors internally by updating DB with status "error".
+- **Status:** ⏳ Acknowledged — error is already stored in DB; catch is harmless
 
 ---
 
@@ -135,15 +133,15 @@
 
 ### 6.2 LOW AI provider selection ignores runtime env changes
 - **Files:** `server/services/ai-provider.ts:141`
-- **Problem:** `createProvider()` called once at module load. Env changes need server restart.
+- **Status:** ⏳ By design — module-level singleton for simplicity; restart to change
 
 ### 6.3 LOW Two different status enums in same `dailyProgress` table
 - **Files:** `server/routes/plan.ts:383-386`, `server/routes/leetcode.ts:132`
-- **Problem:** Manual log uses `IN_PROGRESS`; daily plan uses `SOLVED | TRIED | SKIPPED | PENDING`. Different semantics, same table.
+- **Status:** ⏳ Acknowledged — different workflows have different status values
 
 ### 6.4 LOW History endpoint — leetcodeUrl stored in plan is always valid
 - **Files:** `server/routes/plan.ts:569-593`
-- **Status:** Not a real issue — slug is stored, URL is valid.
+- **Status:** Not an issue — slug is stored, URL is always valid
 
 ---
 
@@ -151,11 +149,11 @@
 
 ### 7.1 LOW Dead file: `server/local-dev/test-ai.ts`
 - **Files:** `server/local-dev/test-ai.ts`
-- **Status:** ✅ Fixed — moved to `scripts/test-ai.ts`, out of the production source tree
+- **Status:** ✅ Fixed — moved to `scripts/test-ai.ts`
 
 ### 7.2 LOW Jest types dependency may be unused
 - **Files:** `package.json` devDependencies
-- **Note:** Project uses `bun test`, not jest. Verify alignment.
+- **Status:** ⏳ Acknowledged — project uses bun test
 
 ### 7.3 LOW `/drizzle/` migration dir not gitignored
 - **Files:** `.gitignore`
@@ -163,4 +161,4 @@
 
 ### 7.4 LOW Separate DB per process — document if clustered
 - **Files:** `server/db/index.ts:23-26`
-- **Note:** Singleton works for single-process Bun. Document limitation if ever clustered.
+- **Status:** ⏳ Acknowledged — singleton works for single-process Bun

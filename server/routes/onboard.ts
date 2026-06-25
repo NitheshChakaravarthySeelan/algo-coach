@@ -4,7 +4,6 @@ import { db } from '../db'
 import { userPreferences, roadmapPlan } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
 import { eq } from 'drizzle-orm'
-import { generateRoadmap } from '../services/ai'
 
 const app = new Hono<{ Variables: { userId: string } }>()
 app.use('/*', authMiddleware)
