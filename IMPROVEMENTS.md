@@ -159,7 +159,7 @@
 
 ### 7.3 LOW `/drizzle/` migration dir not gitignored
 - **Files:** `.gitignore`
-- **Fix:** Add `/drizzle/` to `.gitignore`.
+- **Status:** ✅ Fixed — added `drizzle` to `.gitignore`
 
 ### 7.4 LOW Separate DB per process — document if clustered
 - **Files:** `server/db/index.ts:23-26`
