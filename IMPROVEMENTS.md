@@ -9,8 +9,7 @@
 
 ### 1.2 CRITICAL Daily plan explanation is never persisted
 - **Files:** `server/routes/plan.ts:340`, `server/db/schema.ts:111-119`
-- **Problem:** `POST /today` returns `{ ...entry, explanation: task.explanation }` but the `dailyPlan` table has no `explanation` column. The field is discarded on insert. `GET /today` never returns it. The frontend (`TodaysPlan.tsx:267`) renders `plan.explanation` but it's always `undefined` for persisted plans.
-- **Impact:** AI-generated explanations are lost after first render. Only the POST response has it; GET never does.
+- **Status:** ✅ Fixed — added `explanation` text column to `dailyPlan` schema, setup SQL, and store during insert
 - **Fix:** Add `explanation` text column to `dailyPlan` in schema and setup SQL. Store it during insert.
 
 ### 1.3 CRITICAL Streak ignores manually logged problems
