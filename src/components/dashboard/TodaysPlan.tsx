@@ -39,7 +39,12 @@ export function TodaysPlan() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [exists, setExists] = useState(false)
-  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('MIXED')
+  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>(() => {
+    const lastDate = localStorage.getItem('algocoach:lastVisitDate')
+    const today = new Date().toISOString().slice(0, 10)
+    if (lastDate !== today) return 'MIXED'
+    return (localStorage.getItem('algocoach:difficultyFilter') as DifficultyFilter) || 'MIXED'
+  })
   const [markingSlug, setMarkingSlug] = useState<string | null>(null)
   const [regeneratingSlot, setRegeneratingSlot] = useState<number | null>(null)
   const [easierSlug, setEasierSlug] = useState<string | null>(null)
@@ -165,7 +170,14 @@ export function TodaysPlan() {
     }
   }
 
-  useEffect(() => { fetchPlan() }, [])
+  useEffect(() => {
+    localStorage.setItem('algocoach:lastVisitDate', new Date().toISOString().slice(0, 10))
+    fetchPlan()
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('algocoach:difficultyFilter', difficultyFilter)
+  }, [difficultyFilter])
 
   useEffect(() => {
     if (!loading && !exists && !generating) {

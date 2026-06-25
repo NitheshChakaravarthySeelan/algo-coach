@@ -40,8 +40,8 @@
 
 ### 3.1 HIGH Difficulty filter persists across sessions
 - **Files:** `src/components/dashboard/TodaysPlan.tsx:42,69-83`
-- **Problem:** The difficulty filter is stored in component state. If user sets `EASY` and returns next day, the filter still says `EASY` when auto-generating.
-- **Fix:** Reset to `MIXED` on new day, or add visual indicator.
+- **Status:** ✅ Fixed — difficulty filter persists in localStorage but resets to MIXED on new day detection
+- **Fix:** Reset to MIXED on new day, or add visual indicator.
 
 ### 3.2 HIGH Regenerate uses stored week number, not current roadmap week
 - **Files:** `server/routes/plan.ts:455`
