@@ -111,7 +111,7 @@
 
 ### 5.4 MEDIUM Missing Zod validation on POST/PATCH plan route bodies
 - **Files:** `server/routes/plan.ts:270,350`
-- **Problem:** POST /today does `body.difficulty` with no schema validation. PATCH checks status allowlist but doesn't validate other fields.
+- **Status:** ✅ Fixed — added `difficultySchema`, `planStatusSchema`, `regenerateBodySchema` with safeParse validation
 
 ### 5.5 MEDIUM ~15 repeated try/catch error handlers — no global error middleware
 - **Files:** `server/routes/plan.ts` (every route)

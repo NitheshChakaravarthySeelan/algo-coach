@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
+import { z } from 'zod'
 import { db } from '../db'
 import { userPreferences, roadmapPlan, dailyPlan, dailyProgress, roadmapJob } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
@@ -20,6 +21,13 @@ async function getCurrentWeek(userId: string, weeks: any[]): Promise<number> {
   if (week > weeks.length) week = weeks.length
   return week
 }
+
+const difficultySchema = z.enum(['EASY', 'MEDIUM', 'HARD', 'MIXED'])
+const planStatusSchema = z.enum(['SOLVED', 'TRIED', 'SKIPPED', 'PENDING'])
+const regenerateBodySchema = z.object({
+  slot: z.number().int().min(0).optional(),
+  easier: z.boolean().optional(),
+})
 
 function tryParseError(msg: string): string {
   try {
@@ -280,7 +288,8 @@ app.post('/today', async (c) => {
   try {
     const userId = c.get('userId')
     const body: any = await c.req.json().catch(() => ({}))
-    const difficultyFilter = (body.difficulty || "MIXED") as "EASY" | "MEDIUM" | "HARD" | "MIXED"
+    const diffResult = difficultySchema.safeParse(body.difficulty)
+    const difficultyFilter = diffResult.success ? diffResult.data : 'MIXED'
 
     const todayMs = Date.now() - (Date.now() % 86400000)
     const tomorrowMs = todayMs + 86400000
@@ -364,10 +373,11 @@ app.patch('/today/:planId/problem/:slug', async (c) => {
     const userId = c.get('userId')
     const { planId, slug } = c.req.param()
     const body: any = await c.req.json()
-    const status = body.status as string
-    if (!["SOLVED", "TRIED", "SKIPPED", "PENDING"].includes(status)) {
+    const statusResult = planStatusSchema.safeParse(body.status)
+    if (!statusResult.success) {
       return c.json({ success: false, error: 'Invalid status. Use SOLVED, TRIED, SKIPPED, or PENDING.' }, 400)
     }
+    const status = statusResult.data
 
     const plan = await db.query.dailyPlan.findFirst({
       where: and(eq(dailyPlan.id, planId), eq(dailyPlan.userId, userId)),
@@ -420,8 +430,9 @@ app.post('/today/:planId/regenerate', async (c) => {
     const userId = c.get('userId')
     const { planId } = c.req.param()
     const body: any = await c.req.json().catch(() => ({}))
-    const slot = body.slot as number | undefined
-    const easier = body.easier === true
+    const regenResult = regenerateBodySchema.safeParse(body)
+    const slot = regenResult.success ? regenResult.data.slot : undefined
+    const easier = regenResult.success ? regenResult.data.easier === true : false
 
     const plan = await db.query.dailyPlan.findFirst({
       where: and(eq(dailyPlan.id, planId), eq(dailyPlan.userId, userId)),
