@@ -142,4 +142,9 @@ export function createTables(db: Database) {
   // Add unique indexes for tables that might already exist without them
   db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_leetcode_account_user_id ON leetcode_account(user_id)")
   db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_roadmap_plan_user_id ON roadmap_plan(user_id)")
+
+  // Performance indexes for frequently queried columns
+  db.run("CREATE INDEX IF NOT EXISTS idx_daily_plan_user_date ON daily_plan(user_id, date)")
+  db.run("CREATE INDEX IF NOT EXISTS idx_daily_progress_user_problem ON daily_progress(user_id, problem_id)")
+  db.run("CREATE INDEX IF NOT EXISTS idx_roadmap_job_user ON roadmap_job(user_id)")
 }

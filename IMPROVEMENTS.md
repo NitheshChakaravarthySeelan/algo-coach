@@ -103,10 +103,7 @@
 
 ### 5.2 MEDIUM Missing DB indexes on frequently queried columns
 - **Files:** `server/db/setup.ts:82-139`
-- **Missing indexes:**
-  - `daily_plan(user_id, date)` — queried by every GET/POST /today
-  - `daily_progress(user_id, problem_id)` — queried by PATCH problem status and POST /leetcode/log
-  - `roadmap_job(user_id)` — queried by GET /roadmap/jobs/:jobId
+- **Status:** ✅ Fixed — added indexes on `daily_plan(user_id, date)`, `daily_progress(user_id, problem_id)`, `roadmap_job(user_id)`
 
 ### 5.3 MEDIUM No social login providers configured
 - **Files:** `server/auth/index.ts:8-14`
