@@ -78,6 +78,14 @@ export function Dashboard() {
       })
   }, [session])
 
+  useEffect(() => {
+    const handler = () => {
+      api.plan.streak().then(r => r && setStreak(r.data)).catch(() => {})
+    }
+    window.addEventListener('algocoach:problem-solved', handler)
+    return () => window.removeEventListener('algocoach:problem-solved', handler)
+  }, [])
+
   async function handleLink(e: React.FormEvent) {
     e.preventDefault()
     if (!lcUsername.trim()) return

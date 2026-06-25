@@ -83,8 +83,8 @@
 
 ### 4.3 MEDIUM Marking problem solved doesn't update streak until refresh
 - **Files:** `src/components/dashboard/TodaysPlan.tsx:85-106`, `src/pages/Dashboard.tsx:43`
-- **Problem:** Streak is fetched once on load and never re-fetched after marking a problem solved.
-- **Fix:** Emit callback from TodaysPlan when problem is solved, or have the PATCH endpoint return updated streak data.
+- **Status:** ✅ Fixed — Dashboard listens for `algocoach:problem-solved` event and re-fetches streak
+- **Fix:** Listen for custom event in Dashboard and re-fetch streak on problem solved.
 
 ### 4.4 LOW "Done" badge shows cumulative counts across multiple plans per week
 - **Files:** `src/components/dashboard/RoadmapOverview.tsx:291-313`
