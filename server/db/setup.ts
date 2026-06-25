@@ -147,4 +147,7 @@ export function createTables(db: Database) {
   db.run("CREATE INDEX IF NOT EXISTS idx_daily_plan_user_date ON daily_plan(user_id, date)")
   db.run("CREATE INDEX IF NOT EXISTS idx_daily_progress_user_problem ON daily_progress(user_id, problem_id)")
   db.run("CREATE INDEX IF NOT EXISTS idx_roadmap_job_user ON roadmap_job(user_id)")
+
+  // Migrations for existing databases (safe to run multiple times)
+  try { db.run("ALTER TABLE daily_plan ADD COLUMN explanation text") } catch {}
 }
