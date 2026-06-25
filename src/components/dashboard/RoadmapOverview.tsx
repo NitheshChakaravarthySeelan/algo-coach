@@ -267,7 +267,7 @@ export function RoadmapOverview() {
             const isPast = week.week < roadmap.currentWeek
             const wp = weekProgressMap.get(week.week)
             const solved = wp?.solvedCount ?? 0
-            const total = wp?.assignedCount ?? 0
+            const total = wp?.targetCount ?? 0
             const pct = total > 0 ? Math.round((solved / total) * 100) : -1
 
             return (

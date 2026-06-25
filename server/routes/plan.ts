@@ -246,7 +246,7 @@ app.get('/roadmap/progress', async (c) => {
         targetCount: w.problemsCount,
         assignedCount: total,
         solvedCount: solved,
-        percent: total > 0 ? Math.round((solved / total) * 100) : 0,
+        percent: w.problemsCount > 0 ? Math.round((solved / w.problemsCount) * 100) : 0,
       }
     })
 

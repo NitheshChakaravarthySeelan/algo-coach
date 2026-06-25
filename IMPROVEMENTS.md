@@ -88,7 +88,7 @@
 
 ### 4.4 LOW "Done" badge shows cumulative counts across multiple plans per week
 - **Files:** `src/components/dashboard/RoadmapOverview.tsx:291-313`
-- **Problem:** Week progress shows assigned count (all problems across all plans for that week) rather than roadmap target count.
+- **Status:** ✅ Fixed — progress percent now uses roadmap `problemsCount` as target instead of cumulative assigned count
 
 ### 4.5 LOW Naming: `fetchPlan` vs `generatePlan` could be clearer
 - **Files:** `src/components/dashboard/TodaysPlan.tsx:48,69`
