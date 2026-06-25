@@ -119,7 +119,7 @@
 
 ### 5.6 LOW Empty plan when difficulty filter eliminates all AI results
 - **Files:** `server/services/ai.ts:186-193`
-- **Problem:** If filtering search results by difficulty empties the array, `pickFromBucket` gets empty buckets and returns empty problems without helpful explanation.
+- **Status:** ✅ Fixed — added early return with helpful message when difficulty filter leaves zero results
 
 ### 5.7 LOW `processRoadmapJob` fire-and-forget with redundant catch
 - **Files:** `server/services/ai.ts:122-124`

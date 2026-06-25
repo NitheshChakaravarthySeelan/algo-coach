@@ -192,6 +192,13 @@ export async function selectDailyProblems(params: {
     if (filtered.length) searchResults = filtered
   }
 
+  if (!searchResults.length) {
+    return {
+      problems: [],
+      explanation: `No unsolved ${difficultyFilter.toLowerCase()} problems found for ${week.topic}. Try a different difficulty filter.`,
+    }
+  }
+
   const easy = searchResults.filter((p) => p.difficulty === "Easy").sort((a, b) => b.acRate - a.acRate)
   const medium = searchResults.filter((p) => p.difficulty === "Medium").sort((a, b) => b.acRate - a.acRate)
   const hard = searchResults.filter((p) => p.difficulty === "Hard").sort((a, b) => b.acRate - a.acRate)
@@ -364,5 +371,5 @@ function parseTopicToSlugs(topic: string): string[] {
       if (slug) slugs.add(slug)
     }
   }
-  return [...slugs]
+  return [...slugs].filter(Boolean)
 }
