@@ -3,11 +3,22 @@ import { streamSSE } from 'hono/streaming'
 import { db } from '../db'
 import { userPreferences, roadmapPlan, dailyPlan, dailyProgress, roadmapJob } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
-import { eq, and, gte, desc, sql } from 'drizzle-orm'
+import { eq, and, desc, sql } from 'drizzle-orm'
 import { selectDailyProblems, startJobProcessing } from '../services/ai'
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
+}
+
+async function getCurrentWeek(userId: string, weeks: any[]): Promise<number> {
+  if (!weeks.length) return 1
+  const solved = await db.query.dailyProgress.findMany({
+    where: and(eq(dailyProgress.userId, userId), eq(dailyProgress.status, 'SOLVED')),
+  })
+  const solvedDays = new Set(solved.map(r => r.date.toISOString().slice(0, 10))).size
+  let week = Math.floor(solvedDays / 7) + 1
+  if (week > weeks.length) week = weeks.length
+  return week
 }
 
 function tryParseError(msg: string): string {
@@ -38,7 +49,8 @@ app.get('/roadmap', async (c) => {
     })
     if (!plan) return c.json({ success: false, error: 'No roadmap found' }, 404)
     const weeks = Array.isArray(plan.weeks) ? plan.weeks : []
-    return c.json({ success: true, data: { ...plan, ready: weeks.length > 0 } })
+    const currentWeek = await getCurrentWeek(userId, weeks)
+    return c.json({ success: true, data: { ...plan, currentWeek, ready: weeks.length > 0 } })
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500)
   }
@@ -55,20 +67,12 @@ app.patch('/roadmap/advance', async (c) => {
     const weeks = Array.isArray(plan.weeks) ? plan.weeks : []
     if (!weeks.length) return c.json({ success: false, error: 'Roadmap not ready' }, 400)
 
-    if (plan.currentWeek >= weeks.length) {
+    const currentWeek = await getCurrentWeek(userId, weeks)
+    if (currentWeek >= weeks.length) {
       return c.json({ success: false, error: 'Roadmap already completed' }, 400)
     }
 
-    const nextWeek = plan.currentWeek + 1
-    await db.update(roadmapPlan).set({
-      currentWeek: nextWeek,
-      updatedAt: new Date(),
-    }).where(eq(roadmapPlan.userId, userId))
-
-    const updated = await db.query.roadmapPlan.findFirst({
-      where: eq(roadmapPlan.userId, userId),
-    })
-    return c.json({ success: true, data: { ...updated, ready: true } })
+    return c.json({ success: true, data: { ...plan, currentWeek, ready: true } })
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500)
   }
@@ -258,7 +262,15 @@ app.get('/today', async (c) => {
       ),
     })
     if (!plan) return c.json({ success: false, exists: false }, 404)
-    return c.json({ success: true, exists: true, data: plan })
+
+    const planRecord = await db.query.roadmapPlan.findFirst({
+      where: eq(roadmapPlan.userId, userId),
+    })
+    const weeks = Array.isArray(planRecord?.weeks) ? planRecord.weeks : []
+    const currentWeek = await getCurrentWeek(userId, weeks)
+    const topic = weeks[currentWeek - 1] ? (weeks[currentWeek - 1] as Record<string, unknown>)?.topic as string : plan.topic
+
+    return c.json({ success: true, exists: true, data: { ...plan, weekNumber: currentWeek, topic } })
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500)
   }
@@ -289,7 +301,7 @@ app.post('/today', async (c) => {
 
     const roadmap = Array.isArray(planRecord.weeks) ? planRecord.weeks : []
     if (roadmap.length === 0) return c.json({ success: false, error: 'Roadmap is still being generated. Please try again shortly.' }, 400)
-    const currentWeek = planRecord.currentWeek
+    const currentWeek = await getCurrentWeek(userId, roadmap)
 
     const allPlans = await db.query.dailyPlan.findMany({
       where: eq(dailyPlan.userId, userId),

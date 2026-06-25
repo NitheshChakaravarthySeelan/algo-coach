@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { BookOpen, ChevronRight, Sparkles, RefreshCw, CheckCircle2, Trophy, ArrowRight, AlertCircle, MapPin } from 'lucide-react'
+import { BookOpen, ChevronRight, Sparkles, RefreshCw, CheckCircle2, Trophy, AlertCircle, MapPin } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -33,7 +33,6 @@ export function RoadmapOverview() {
   const [progress, setProgress] = useState<WeekProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-  const [advancing, setAdvancing] = useState(false)
   const [genError, setGenError] = useState('')
   const [error, setError] = useState('')
   const [streamText, setStreamText] = useState('')
@@ -91,23 +90,13 @@ export function RoadmapOverview() {
     })
   }, [])
 
-  const advanceWeek = useCallback(async () => {
-    setAdvancing(true)
-    try {
-      const res = await api.plan.roadmapAdvance()
-      if (res.success) {
-        setRoadmap(res.data)
-        const pRes = await api.plan.roadmapProgress()
-        if (pRes.success) setProgress(pRes.data)
-      }
-    } catch (e: any) {
-      setError(e?.message || 'Failed to advance week')
-    } finally {
-      setAdvancing(false)
-    }
-  }, [])
-
   useEffect(() => { fetchRoadmap() }, [fetchRoadmap])
+
+  useEffect(() => {
+    const handler = () => { fetchAll() }
+    window.addEventListener('algocoach:problem-solved', handler)
+    return () => window.removeEventListener('algocoach:problem-solved', handler)
+  }, [fetchAll])
 
   if (loading) {
     return (
@@ -227,8 +216,6 @@ export function RoadmapOverview() {
   for (const p of progress) weekProgressMap.set(p.week, p)
 
   const isFinished = roadmap.currentWeek > weeks.length
-  const currentWp = weekProgressMap.get(roadmap.currentWeek)
-  const currentAllSolved = currentWp != null && currentWp.assignedCount > 0 && currentWp.percent >= 100
 
   return (
     <div className="glass-card p-6">
@@ -335,26 +322,6 @@ export function RoadmapOverview() {
               </motion.div>
             )
           })}
-
-          {currentAllSolved && !isFinished && (
-            <div className="mt-4 pt-3 border-t border-surface-700/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-emerald-400">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>
-                    Week {roadmap.currentWeek} complete — all problems solved!
-                  </span>
-                </div>
-                <Button size="sm" onClick={advanceWeek} disabled={advancing}>
-                  {advancing ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <><ArrowRight className="w-4 h-4" /> Week {roadmap.currentWeek + 1}</>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>

@@ -98,6 +98,9 @@ export function TodaysPlan() {
           ),
         }
       })
+      if (status === 'SOLVED') {
+        window.dispatchEvent(new CustomEvent('algocoach:problem-solved'))
+      }
     } catch (e: any) {
       setError(e?.message || 'Failed to update problem status')
     } finally {
@@ -163,6 +166,12 @@ export function TodaysPlan() {
   }
 
   useEffect(() => { fetchPlan() }, [])
+
+  useEffect(() => {
+    if (!loading && !exists && !generating) {
+      generatePlan()
+    }
+  }, [loading, exists])
 
   if (loading) {
     return (
