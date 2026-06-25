@@ -1,5 +1,12 @@
 # AlgoCoach — Improvement Analysis
 
+> **Migration notes for v0.1.5:**
+> - A new `explanation` column was added to the `daily_plan` table. The server auto-migrates existing databases on startup via `ALTER TABLE` (safe to re-run).
+> - The `currentWeek` field is now **auto-calculated** from solved days instead of manually advanced. The stored `current_week` value in `roadmap_plan` is no longer used (replaced by `getCurrentWeek()` at query time).
+> - **Bun required** — this package uses `bun:sqlite` and cannot run on Node.js.
+> - **Config at `~/.algocoach/.env`** — not the project root `.env`.
+> - **Open an issue** at https://github.com/nithesh141/algocoach for bugs or feature requests.
+
 ## Priority 1 — Data Loss / Crash Bugs
 
 ### 1.1 CRITICAL Completed roadmap causes daily plan generation crash
