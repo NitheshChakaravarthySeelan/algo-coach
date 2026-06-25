@@ -37,13 +37,16 @@ export function RoadmapOverview() {
   const [error, setError] = useState('')
   const [streamText, setStreamText] = useState('')
   const streamRef = useRef('')
+  const genTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchAll = useCallback(async () => {
     setError('')
     try {
       const res = await api.plan.roadmap()
       setRoadmap(res.data)
-      if (!res.data.ready) setTimeout(() => generate(), 2000)
+      if (!res.data.ready) {
+        genTimeoutRef.current = setTimeout(() => generate(), 2000)
+      }
       try {
         const pRes = await api.plan.roadmapProgress()
         if (pRes.success) setProgress(pRes.data)
@@ -90,7 +93,12 @@ export function RoadmapOverview() {
     })
   }, [])
 
-  useEffect(() => { fetchRoadmap() }, [fetchRoadmap])
+  useEffect(() => {
+    fetchRoadmap()
+    return () => {
+      if (genTimeoutRef.current) clearTimeout(genTimeoutRef.current)
+    }
+  }, [fetchRoadmap])
 
   useEffect(() => {
     const handler = () => { fetchAll() }

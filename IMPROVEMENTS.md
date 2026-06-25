@@ -50,7 +50,7 @@
 
 ### 3.3 HIGH `setTimeout` race condition on unmount
 - **Files:** `src/components/dashboard/RoadmapOverview.tsx:47`
-- **Problem:** `if (!res.data.ready) setTimeout(() => generate(), 2000)` — no cleanup on unmount. Fires `setState` on unmounted component.
+- **Status:** ✅ Fixed — timeout ID stored in ref, cleared in useEffect cleanup on unmount
 - **Fix:** Store timeout ID in a `ref`, clear in `useEffect` cleanup.
 
 ### 3.4 MEDIUM Streak `Math.round` can be imprecise near midnight
