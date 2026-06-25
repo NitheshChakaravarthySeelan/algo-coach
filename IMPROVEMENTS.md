@@ -63,10 +63,9 @@
 - **Status:** ✅ Fixed — added 60-second interval to purge expired entries from the store
 - **Fix:** Add periodic cleanup of expired entries.
 
-### 3.6 MEDIUM Wrong field name / proportions in StatsCards
+### 3.6 MEDIUM StatsCards totalSolved=0 proportions
 - **Files:** `src/components/dashboard/StatsCards.tsx:73-79`
-- **Problem:** Ring progress uses `stats.totalSolved || 1` as max. When `totalSolved = 0`, it becomes 1 showing incorrect proportions.
-- **Impact:** Minor visual issue when totalSolved = 0.
+- **Status:** ✅ Fixed — removed `|| 1` fallback from max prop; `RingProgress` already guards `max > 0`
 
 ---
 

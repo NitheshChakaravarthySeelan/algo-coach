@@ -73,9 +73,9 @@ export function StatsCards({ stats }: { stats: StatsData }) {
       <div className="md:col-span-4 glass-card p-6">
         <h3 className="text-sm font-medium text-surface-400 mb-6">Breakdown</h3>
         <div className="flex justify-around">
-          <RingProgress value={stats.easySolved} max={stats.totalSolved || 1} color={difficultyColors.easy.ring} label="Easy" />
-          <RingProgress value={stats.mediumSolved} max={stats.totalSolved || 1} color={difficultyColors.medium.ring} label="Medium" />
-          <RingProgress value={stats.hardSolved} max={stats.totalSolved || 1} color={difficultyColors.hard.ring} label="Hard" />
+          <RingProgress value={stats.easySolved} max={stats.totalSolved} color={difficultyColors.easy.ring} label="Easy" />
+          <RingProgress value={stats.mediumSolved} max={stats.totalSolved} color={difficultyColors.medium.ring} label="Medium" />
+          <RingProgress value={stats.hardSolved} max={stats.totalSolved} color={difficultyColors.hard.ring} label="Hard" />
         </div>
       </div>
     </div>
