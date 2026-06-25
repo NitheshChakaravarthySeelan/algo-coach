@@ -60,7 +60,7 @@
 
 ### 3.5 MEDIUM In-memory rate limiter never evicts entries
 - **Files:** `server/middleware/rate-limit.ts:8`
-- **Problem:** `Map<string, Entry>` grows unboundedly. No cleanup for expired entries.
+- **Status:** ✅ Fixed — added 60-second interval to purge expired entries from the store
 - **Fix:** Add periodic cleanup of expired entries.
 
 ### 3.6 MEDIUM Wrong field name / proportions in StatsCards
