@@ -23,21 +23,16 @@
 
 ### 2.1 HIGH No daily plan auto-generation on load
 - **Files:** `src/components/dashboard/TodaysPlan.tsx:165`, `server/routes/plan.ts:247-265`
-- **Problem:** On dashboard load, if no plan exists, it shows an empty state with a manual "Generate Today's Plan" button. No auto-generation.
-- **Impact:** Users who forget to click get no problems.
+- **Status:** ✅ Fixed — `useEffect` auto-calls `generatePlan()` when `fetchPlan()` returns `exists === false`
 - **Fix:** Auto-generate in frontend after `fetchPlan()` completes with `exists === false`.
 
 ### 2.2 HIGH No auto-advance when week is complete
 - **Files:** `server/routes/plan.ts:47-75`, `src/components/dashboard/RoadmapOverview.tsx:339-357`
-- **Problem:** Advancing weeks is purely manual. There's no automatic check when the last problem is solved.
-- **Impact:** Users can forget to advance, generating daily plans for the wrong week.
-- **Fix:** Auto-advance server-side during `POST /today` if current week is fully solved.
+- **Status:** ✅ Handled — `currentWeek` is auto-calculated from solved days, so it advances automatically without a manual button
 
 ### 2.3 HIGH Advance button hidden when no daily plan exists for current week
 - **Files:** `src/components/dashboard/RoadmapOverview.tsx:229-231`
-- **Problem:** `currentAllSolved` requires `assignedCount > 0`, which is false if no daily plans exist for the current week. The button is hidden.
-- **Impact:** User can never advance without first generating a plan.
-- **Fix:** Show an alternate prompt like "Generate today's plan to start this week" instead of hiding the button.
+- **Status:** ✅ Handled — advance button was removed entirely; `currentWeek` is auto-calculated from solved days
 
 ---
 
