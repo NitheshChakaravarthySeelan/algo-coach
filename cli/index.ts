@@ -5,6 +5,22 @@ import fs from "fs"
 const CONFIG_DIR = path.join(process.env.HOME || process.env.USERPROFILE || ".", ".algocoach")
 const ENV_PATH = path.join(CONFIG_DIR, ".env")
 
+async function checkVersion() {
+  try {
+    const pkg = JSON.parse(await Bun.file(path.join(import.meta.dir, "../package.json")).text())
+    const current = pkg.version
+    const res = await fetch("https://registry.npmjs.org/algocoach/latest", {
+      signal: AbortSignal.timeout(3000),
+    })
+    const data: any = await res.json()
+    const latest = data.version
+    if (latest !== current) {
+      console.log(`  Update available: ${current} → ${latest}`)
+      console.log(`  Run: npm install -g algocoach@latest\n`)
+    }
+  } catch {}
+}
+
 function envTemplate() {
   return [
     "# AlgoCoach Configuration",
@@ -64,6 +80,7 @@ Then run: algocoach start
 }
 
 async function cmdStart() {
+  checkVersion()
   fs.mkdirSync(CONFIG_DIR, { recursive: true })
 
   if (!fs.existsSync(ENV_PATH)) {
