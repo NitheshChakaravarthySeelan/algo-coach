@@ -13,13 +13,25 @@ function sleep(ms: number) {
 
 async function getCurrentWeek(userId: string, weeks: any[]): Promise<number> {
   if (!weeks.length) return 1
-  const solved = await db.query.dailyProgress.findMany({
-    where: and(eq(dailyProgress.userId, userId), eq(dailyProgress.status, 'SOLVED')),
+
+  const allPlans = await db.query.dailyPlan.findMany({
+    where: eq(dailyPlan.userId, userId),
   })
-  const solvedDays = new Set(solved.map(r => r.date.toISOString().slice(0, 10))).size
-  let week = Math.floor(solvedDays / 7) + 1
-  if (week > weeks.length) week = weeks.length
-  return week
+
+  for (let i = 0; i < weeks.length; i++) {
+    const week = weeks[i] as Record<string, unknown>
+    const weekNum = week.week as number
+    const targetCount = (week.problemsCount as number) || 1
+    const weekPlans = allPlans.filter((p: any) => p.weekNumber === weekNum)
+    const solvedCount = weekPlans.reduce((count, plan) => {
+      const problems = Array.isArray(plan.problems) ? plan.problems : []
+      return count + problems.filter((p: any) => (p as Record<string, unknown>).status === 'SOLVED').length
+    }, 0)
+    const percent = Math.round((solvedCount / targetCount) * 100)
+    if (percent < 100) return weekNum
+  }
+
+  return weeks.length
 }
 
 const difficultySchema = z.enum(['EASY', 'MEDIUM', 'HARD', 'MIXED'])
