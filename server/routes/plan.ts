@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
 import { db } from '../db'
-import { userPreferences, roadmapPlan, dailyPlan, dailyProgress, roadmapJob } from '../db/schema'
+import { userPreferences, roadmapPlan, dailyPlan, dailyProgress, roadmapJob, problemReview } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
 import { eq, and, desc, sql } from 'drizzle-orm'
 import { selectDailyProblems, startJobProcessing } from '../services/ai'
@@ -32,6 +32,97 @@ async function getCurrentWeek(userId: string, weeks: any[]): Promise<number> {
   }
 
   return weeks.length
+}
+
+async function scheduleReview(userId: string, problem: any, status: string) {
+  const existing = await db.query.problemReview.findFirst({
+    where: and(eq(problemReview.userId, userId), eq(problemReview.problemId, problem.titleSlug)),
+  })
+
+  const now = Date.now()
+  const dayMs = 86400000
+
+  if (status === 'SOLVED') {
+    const quality = existing ? 4 : 3
+    if (existing) {
+      let ef = existing.easinessFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+      if (ef < 1.3) ef = 1.3
+      const newInterval = existing.reviewCount === 0 ? 1 : existing.reviewCount === 1 ? 6 : Math.round(existing.interval * ef)
+      await db.update(problemReview).set({
+        interval: newInterval,
+        easinessFactor: ef,
+        nextReviewAt: new Date(now + newInterval * dayMs),
+        lastReviewedAt: new Date(now),
+        reviewCount: existing.reviewCount + 1,
+      }).where(eq(problemReview.id, existing.id))
+    } else {
+      await db.insert(problemReview).values({
+        id: crypto.randomUUID(),
+        userId,
+        problemId: problem.titleSlug,
+        problemName: problem.title,
+        difficulty: problem.difficulty,
+        topics: problem.topicTags || [],
+        leetcodeUrl: problem.leetcodeUrl,
+        acRate: problem.acRate,
+        interval: 1,
+        easinessFactor: 2.5,
+        nextReviewAt: new Date(now + dayMs),
+        lastReviewedAt: new Date(now),
+        reviewCount: 1,
+        createdAt: new Date(),
+      })
+    }
+  } else if (['TRIED', 'SKIPPED'].includes(status)) {
+    if (existing) {
+      let ef = existing.easinessFactor - 0.2
+      if (ef < 1.3) ef = 1.3
+      await db.update(problemReview).set({
+        interval: 1,
+        easinessFactor: ef,
+        nextReviewAt: new Date(now + dayMs),
+        lastReviewedAt: new Date(now),
+        reviewCount: existing.reviewCount + 1,
+      }).where(eq(problemReview.id, existing.id))
+    } else {
+      await db.insert(problemReview).values({
+        id: crypto.randomUUID(),
+        userId,
+        problemId: problem.titleSlug,
+        problemName: problem.title,
+        difficulty: problem.difficulty,
+        topics: problem.topicTags || [],
+        leetcodeUrl: problem.leetcodeUrl,
+        acRate: problem.acRate,
+        interval: 1,
+        easinessFactor: 1.3,
+        nextReviewAt: new Date(now + Math.round(dayMs / 2)),
+        lastReviewedAt: new Date(now),
+        reviewCount: 1,
+        createdAt: new Date(),
+      })
+    }
+  }
+}
+
+async function getDueReviews(userId: string): Promise<any[]> {
+  const now = new Date()
+  const due = await db.query.problemReview.findMany({
+    where: and(eq(problemReview.userId, userId), sql`${problemReview.nextReviewAt} <= ${now}`),
+    orderBy: [sql`${problemReview.nextReviewAt} ASC`],
+    limit: 2,
+  })
+  return due.map((r) => ({
+    title: r.problemName,
+    titleSlug: r.problemId,
+    difficulty: r.difficulty,
+    topicTags: r.topics,
+    leetcodeUrl: r.leetcodeUrl,
+    acRate: r.acRate,
+    status: 'PENDING' as const,
+    completedAt: null,
+    isReview: true,
+  }))
 }
 
 const difficultySchema = z.enum(['EASY', 'MEDIUM', 'HARD', 'MIXED'])
@@ -117,7 +208,7 @@ app.patch('/roadmap/week/:weekNumber', async (c) => {
     const idx = weeks.findIndex((w: any) => (w as Record<string, unknown>).week === weekNumber)
     if (idx === -1) return c.json({ success: false, error: `Week ${weekNumber} not found` }, 404)
 
-    weeks[idx] = { ...(weeks[idx] as Record<string, unknown>), problemsCount }
+    weeks[idx] = { ...(weeks[idx] as any), problemsCount }
 
     await db.update(roadmapPlan).set({
       weeks: weeks as any,
@@ -397,13 +488,16 @@ app.post('/today', async (c) => {
       completedAt: null,
     }))
 
+    const dueReviews = await getDueReviews(userId)
+    const allProblems = [...problems, ...dueReviews]
+
     const entry = {
       id: crypto.randomUUID(),
       userId,
       date: new Date(),
       weekNumber: currentWeek,
       topic: (roadmap[currentWeek - 1] as Record<string, unknown>)?.topic as string || '',
-      problems,
+      problems: allProblems,
       explanation: task.explanation,
     }
 
@@ -465,6 +559,8 @@ app.patch('/today/:planId/problem/:slug', async (c) => {
         status,
       })
     }
+
+    scheduleReview(userId, problem, status).catch(() => {})
 
     return c.json({ success: true, data: { ...problem, status, completedAt: problem.completedAt } })
   } catch (err: any) {

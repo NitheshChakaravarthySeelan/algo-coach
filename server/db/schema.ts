@@ -2,6 +2,7 @@ import {
   sqliteTable,
   text as sqliteText,
   integer,
+  real,
 } from "drizzle-orm/sqlite-core"
 import { jsonText, textArray } from "./custom-types"
 
@@ -114,8 +115,25 @@ export const dailyPlan = sqliteTable("daily_plan", {
   date: integer("date", { mode: "timestamp_ms" }).notNull(),
   weekNumber: integer("week_number").notNull(),
   topic: text("topic").notNull(),
-  problems: jsonText<{ title: string; titleSlug: string; difficulty: string; topicTags: string[]; leetcodeUrl: string; acRate: number; status?: string; completedAt?: string | null }[]>()("problems").notNull(),
+  problems: jsonText<{ title: string; titleSlug: string; difficulty: string; topicTags: string[]; leetcodeUrl: string; acRate: number; status?: string; completedAt?: string | null; isReview?: boolean }[]>()("problems").notNull(),
   explanation: text("explanation"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+})
+
+export const problemReview = sqliteTable("problem_review", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id),
+  problemId: text("problem_id").notNull(),
+  problemName: text("problem_name").notNull(),
+  difficulty: text("difficulty").notNull(),
+  topics: jsonText<string[]>()("topics").notNull(),
+  leetcodeUrl: text("leetcode_url").notNull(),
+  acRate: real("ac_rate").notNull(),
+  interval: integer("interval").notNull().default(1),
+  easinessFactor: real("easiness_factor").notNull().default(2.5),
+  nextReviewAt: integer("next_review_at", { mode: "timestamp_ms" }).notNull(),
+  lastReviewedAt: integer("last_reviewed_at", { mode: "timestamp_ms" }),
+  reviewCount: integer("review_count").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 })
 

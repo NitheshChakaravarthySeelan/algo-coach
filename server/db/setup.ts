@@ -138,6 +138,24 @@ export function createTables(db: Database) {
       "updated_at" integer NOT NULL
     )
   `)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS "problem_review" (
+      "id" text PRIMARY KEY NOT NULL,
+      "user_id" text NOT NULL REFERENCES "user"("id"),
+      "problem_id" text NOT NULL,
+      "problem_name" text NOT NULL,
+      "difficulty" text NOT NULL,
+      "topics" text NOT NULL,
+      "leetcode_url" text NOT NULL,
+      "ac_rate" real NOT NULL,
+      "interval" integer NOT NULL DEFAULT 1,
+      "easiness_factor" real NOT NULL DEFAULT 2.5,
+      "next_review_at" integer NOT NULL,
+      "last_reviewed_at" integer,
+      "review_count" integer NOT NULL DEFAULT 0,
+      "created_at" integer NOT NULL
+    )
+  `)
 
   // Add unique indexes for tables that might already exist without them
   db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_leetcode_account_user_id ON leetcode_account(user_id)")

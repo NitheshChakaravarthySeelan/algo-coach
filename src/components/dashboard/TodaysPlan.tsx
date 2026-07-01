@@ -14,6 +14,7 @@ interface Problem {
   acRate: number
   status?: string
   completedAt?: string | null
+  isReview?: boolean
 }
 
 interface PlanData {
@@ -324,23 +325,28 @@ export function TodaysPlan() {
                       <div className="w-5 h-5 rounded-full border-2 border-surface-600 hover:border-emerald-500" />
                     )}
                   </button>
-                  <button
-                    onClick={() => regenerateSlot(i)}
-                    disabled={isRegenerating}
-                    className="text-surface-600 hover:text-accent-400 transition-colors"
-                    title="Replace this problem"
-                  >
-                    {isRegenerating ? (
-                      <RefreshCw className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <RotateCw className="w-3 h-3" />
-                    )}
-                  </button>
+                  {!problem.isReview && (
+                    <button
+                      onClick={() => regenerateSlot(i)}
+                      disabled={isRegenerating}
+                      className="text-surface-600 hover:text-accent-400 transition-colors"
+                      title="Replace this problem"
+                    >
+                      {isRegenerating ? (
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <RotateCw className="w-3 h-3" />
+                      )}
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <a
+                    <div className="flex items-center gap-2">
+                      {problem.isReview && (
+                        <span className="px-1.5 py-0.5 bg-purple-500/20 rounded text-xs text-purple-400 font-medium">Review</span>
+                      )}
+                      <a
                       href={problem.leetcodeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -391,41 +397,66 @@ export function TodaysPlan() {
                 </div>
 
                 <div className="flex gap-1 shrink-0">
-                  {status !== 'SOLVED' && (
-                    <button
-                      onClick={() => markProblem(problem.titleSlug, 'SOLVED')}
-                      disabled={isMarking}
-                      className="px-2 py-1 text-xs rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
-                    >
-                      Solved
-                    </button>
-                  )}
-                  {status === 'PENDING' && (
-                    <button
-                      onClick={() => markProblem(problem.titleSlug, 'TRIED')}
-                      disabled={isMarking}
-                      className="px-2 py-1 text-xs rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
-                    >
-                      Tried
-                    </button>
-                  )}
-                  {status === 'PENDING' && (
-                    <button
-                      onClick={() => markProblem(problem.titleSlug, 'SKIPPED')}
-                      disabled={isMarking}
-                      className="px-2 py-1 text-xs rounded-lg bg-surface-700/50 text-surface-400 hover:bg-surface-700 transition-colors disabled:opacity-50"
-                    >
-                      Skip
-                    </button>
-                  )}
-                  {status === 'TRIED' && (
-                    <button
-                      onClick={() => onEasierProblem(problem.titleSlug, i)}
-                      disabled={easierSlug === problem.titleSlug}
-                      className="px-2 py-1 text-xs rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
-                    >
-                      {easierSlug === problem.titleSlug ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'I\'m stuck'}
-                    </button>
+                  {problem.isReview ? (
+                    <>
+                      {status !== 'SOLVED' && (
+                        <button
+                          onClick={() => markProblem(problem.titleSlug, 'SOLVED')}
+                          disabled={isMarking}
+                          className="px-2 py-1 text-xs rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                        >
+                          Pass
+                        </button>
+                      )}
+                      {status === 'PENDING' && (
+                        <button
+                          onClick={() => markProblem(problem.titleSlug, 'SKIPPED')}
+                          disabled={isMarking}
+                          className="px-2 py-1 text-xs rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                        >
+                          Fail
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {status !== 'SOLVED' && (
+                        <button
+                          onClick={() => markProblem(problem.titleSlug, 'SOLVED')}
+                          disabled={isMarking}
+                          className="px-2 py-1 text-xs rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                        >
+                          Solved
+                        </button>
+                      )}
+                      {status === 'PENDING' && (
+                        <button
+                          onClick={() => markProblem(problem.titleSlug, 'TRIED')}
+                          disabled={isMarking}
+                          className="px-2 py-1 text-xs rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                        >
+                          Tried
+                        </button>
+                      )}
+                      {status === 'PENDING' && (
+                        <button
+                          onClick={() => markProblem(problem.titleSlug, 'SKIPPED')}
+                          disabled={isMarking}
+                          className="px-2 py-1 text-xs rounded-lg bg-surface-700/50 text-surface-400 hover:bg-surface-700 transition-colors disabled:opacity-50"
+                        >
+                          Skip
+                        </button>
+                      )}
+                      {status === 'TRIED' && (
+                        <button
+                          onClick={() => onEasierProblem(problem.titleSlug, i)}
+                          disabled={easierSlug === problem.titleSlug}
+                          className="px-2 py-1 text-xs rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
+                        >
+                          {easierSlug === problem.titleSlug ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'I\'m stuck'}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
