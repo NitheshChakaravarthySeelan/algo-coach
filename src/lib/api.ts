@@ -124,6 +124,11 @@ export const api = {
     roadmapProgress: () => request<{ success: boolean; data: any }>('/plan/roadmap/progress'),
     roadmapAdvance: () =>
       request<{ success: boolean; data: any }>('/plan/roadmap/advance', { method: 'PATCH' }),
+    updateWeekTarget: (weekNumber: number, problemsCount: number) =>
+      request<{ success: boolean; data: any }>(`/plan/roadmap/week/${weekNumber}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ problemsCount }),
+      }),
     today: {
       get: () => request<{ success: boolean; exists: boolean; data: any | null }>('/plan/today'),
       generate: (difficulty?: 'EASY' | 'MEDIUM' | 'HARD' | 'MIXED') =>

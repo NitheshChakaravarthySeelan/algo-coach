@@ -98,6 +98,41 @@ app.patch('/roadmap/advance', async (c) => {
   }
 })
 
+app.patch('/roadmap/week/:weekNumber', async (c) => {
+  try {
+    const userId = c.get('userId')
+    const weekNumber = parseInt(c.req.param('weekNumber'), 10)
+    const body: any = await c.req.json()
+    const { problemsCount } = body
+    if (typeof problemsCount !== 'number' || problemsCount < 1 || problemsCount > 30) {
+      return c.json({ success: false, error: 'problemsCount must be a number between 1 and 30' }, 400)
+    }
+
+    const plan = await db.query.roadmapPlan.findFirst({
+      where: eq(roadmapPlan.userId, userId),
+    })
+    if (!plan) return c.json({ success: false, error: 'No roadmap found' }, 404)
+
+    const weeks = Array.isArray(plan.weeks) ? [...plan.weeks] : []
+    const idx = weeks.findIndex((w: any) => (w as Record<string, unknown>).week === weekNumber)
+    if (idx === -1) return c.json({ success: false, error: `Week ${weekNumber} not found` }, 404)
+
+    weeks[idx] = { ...(weeks[idx] as Record<string, unknown>), problemsCount }
+
+    await db.update(roadmapPlan).set({
+      weeks: weeks as any,
+      updatedAt: new Date(),
+    }).where(eq(roadmapPlan.userId, userId))
+
+    const updated = await db.query.roadmapPlan.findFirst({
+      where: eq(roadmapPlan.userId, userId),
+    })
+    return c.json({ success: true, data: updated })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
 app.post('/roadmap/generate', async (c) => {
   const userId = c.get('userId')
 

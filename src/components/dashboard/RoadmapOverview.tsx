@@ -36,6 +36,9 @@ export function RoadmapOverview() {
   const [genError, setGenError] = useState('')
   const [error, setError] = useState('')
   const [streamText, setStreamText] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [editCounts, setEditCounts] = useState<Record<number, number>>({})
+  const [saving, setSaving] = useState(false)
   const streamRef = useRef('')
   const genTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -105,6 +108,23 @@ export function RoadmapOverview() {
     window.addEventListener('algocoach:problem-solved', handler)
     return () => window.removeEventListener('algocoach:problem-solved', handler)
   }, [fetchAll])
+
+  async function handleSaveTargets() {
+    if (!roadmap) return
+    setSaving(true)
+    try {
+      for (const [weekNum, count] of Object.entries(editCounts)) {
+        await api.plan.updateWeekTarget(parseInt(weekNum), count)
+      }
+      setEditing(false)
+      setEditCounts({})
+      fetchAll()
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save targets')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -236,6 +256,16 @@ export function RoadmapOverview() {
           <Button variant="secondary" size="sm" onClick={fetchRoadmap} disabled={loading}>
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           </Button>
+          {editing ? (
+            <Button size="sm" onClick={handleSaveTargets} disabled={saving}>
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              <span className="hidden sm:inline ml-1.5">Save</span>
+            </Button>
+          ) : (
+            <Button variant="secondary" size="sm" onClick={() => { setEditing(true); setEditCounts({}) }}>
+              <span className="hidden sm:inline mr-1.5">Edit</span>
+            </Button>
+          )}
           <Button size="sm" onClick={() => generate(true)} disabled={generating}>
             {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             <span className="hidden sm:inline ml-1.5">Regenerate</span>
@@ -324,7 +354,20 @@ export function RoadmapOverview() {
                       </div>
                     )}
                   </div>
-                  <div className="text-xs text-surface-500 shrink-0">{week.problemsCount}</div>
+                  <div className="text-xs text-surface-500 shrink-0">
+                    {editing ? (
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        className="w-14 text-center bg-surface-800 border border-surface-700 rounded px-1 py-0.5 text-surface-200 text-xs focus:outline-none focus:border-accent-500/50"
+                        value={editCounts[week.week] ?? week.problemsCount}
+                        onChange={(e) => setEditCounts((prev) => ({ ...prev, [week.week]: parseInt(e.target.value) || 1 }))}
+                      />
+                    ) : (
+                      week.problemsCount
+                    )}
+                  </div>
                   {isCurrent && <ChevronRight className="w-4 h-4 text-accent-400 shrink-0" />}
                 </div>
               </motion.div>
