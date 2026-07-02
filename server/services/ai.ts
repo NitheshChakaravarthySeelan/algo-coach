@@ -168,11 +168,29 @@ export async function selectDailyProblems(params: {
   const exclude = [...new Set([...overusedSlugs, ...solvedSlugs, ...extraExclude])]
 
   const topicSlugs = parseTopicToSlugs(week.topic)
-  let searchResults = await searchLeetCodeProblems({
-    topics: topicSlugs,
-    excludeSlugs: exclude,
-    limit: 30,
-  })
+  let searchResults: LeetCodeProblem[] = []
+  if (topicSlugs.length > 1) {
+    const seen = new Set<string>()
+    for (const slug of topicSlugs) {
+      const results = await searchLeetCodeProblems({
+        topics: [slug],
+        excludeSlugs: exclude,
+        limit: 30,
+      })
+      for (const p of results) {
+        if (!seen.has(p.titleSlug)) {
+          seen.add(p.titleSlug)
+          searchResults.push(p)
+        }
+      }
+    }
+  } else {
+    searchResults = await searchLeetCodeProblems({
+      topics: topicSlugs,
+      excludeSlugs: exclude,
+      limit: 30,
+    })
+  }
 
   if (!searchResults.length) {
     return {
@@ -204,23 +222,42 @@ export async function selectDailyProblems(params: {
   const hard = searchResults.filter((p) => p.difficulty === "Hard").sort((a, b) => b.acRate - a.acRate)
 
   const selected: LeetCodeProblem[] = []
-  const usedTags = new Set<string>()
+  const usedSlugs = new Set<string>()
 
   function pickFromBucket(bucket: LeetCodeProblem[], want: number): LeetCodeProblem[] {
     const result: LeetCodeProblem[] = []
-    const diverse = bucket.filter((p) => p.topicTags.some((t) => !usedTags.has(t.slug)))
-    const rest = bucket.filter((p) => !diverse.includes(p))
-    for (const pool of [diverse, rest]) {
-      for (const p of pool) {
-        if (result.length >= want) break
-        result.push(p)
-        p.topicTags.forEach((t) => usedTags.add(t.slug))
-      }
+    const candidates = bucket.filter((p) => !usedSlugs.has(p.titleSlug))
+    for (const p of candidates) {
+      if (result.length >= want) break
+      result.push(p)
+      usedSlugs.add(p.titleSlug)
     }
     return result
   }
 
-  if (difficultyFilter !== "MIXED") {
+  // When multiple constituent topics, round-robin across them for topic balance
+  if (topicSlugs.length > 1 && difficultyFilter === "MIXED") {
+    const byTopic = topicSlugs.map((slug) => ({
+      slug,
+      easy: easy.filter((p) => p.topicTags.some((t) => t.slug === slug)),
+      medium: medium.filter((p) => p.topicTags.some((t) => t.slug === slug)),
+      hard: hard.filter((p) => p.topicTags.some((t) => t.slug === slug)),
+    }))
+
+    for (let round = 0; round < count; round++) {
+      const topic = byTopic[round % byTopic.length]
+      const tier = round === 0 ? topic.easy : round === 1 ? topic.medium : topic.hard
+      const picked = pickFromBucket(tier, 1)
+      if (picked.length) {
+        selected.push(...picked)
+        continue
+      }
+      const fallback = [...topic.easy, ...topic.medium, ...topic.hard].filter(
+        (p) => !usedSlugs.has(p.titleSlug),
+      )
+      selected.push(...pickFromBucket(fallback, 1))
+    }
+  } else if (difficultyFilter !== "MIXED") {
     const pool = difficultyFilter === "EASY" ? easy : difficultyFilter === "MEDIUM" ? medium : hard
     selected.push(...pickFromBucket(pool, count))
   } else {

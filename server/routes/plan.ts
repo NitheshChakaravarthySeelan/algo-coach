@@ -106,7 +106,7 @@ async function scheduleReview(userId: string, problem: any, status: string) {
 }
 
 async function getDueReviews(userId: string): Promise<any[]> {
-  const now = new Date()
+  const now = Date.now()
   const due = await db.query.problemReview.findMany({
     where: and(eq(problemReview.userId, userId), sql`${problemReview.nextReviewAt} <= ${now}`),
     orderBy: [sql`${problemReview.nextReviewAt} ASC`],
